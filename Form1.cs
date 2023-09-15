@@ -60,13 +60,22 @@ namespace INFOIBV
             // Alternatively you can create buttons to invoke certain functionality
             // ====================================================================
 
-            //byte[,] workingImage = convertToGrayscale(Image);          // convert image to grayscale
-            byte[,] workingImage = thresholdImage(convertToGrayscale(Image));
+            byte[,] g_scale_image = convertToGrayscale(Image);          // convert image to grayscale
+            byte[,] fake_workingImage = thresholdImage(g_scale_image);
+            float[,] my_filter = new float[3,3];
+            for (int x = 0; x < 3; x++)
+                for (int y = 0; y < 3; y++)
+                    my_filter[x, y] = (float) 1 / 9;
+
+
+            byte[,] workingImage = convolveImage(g_scale_image, my_filter);
             // ==================== END OF YOUR FUNCTION CALLS ====================
             // ====================================================================
 
             // copy array to output Bitmap
-            for (int x = 0; x < workingImage.GetLength(0); x++)             // loop over columns
+            for (
+                
+                int x = 0; x < workingImage.GetLength(0); x++)             // loop over columns
                 for (int y = 0; y < workingImage.GetLength(1); y++)         // loop over rows
                 {
                     Color newColor = Color.FromArgb(workingImage[x, y], workingImage[x, y], workingImage[x, y]);
@@ -232,12 +241,48 @@ namespace INFOIBV
          */
         private byte[,] convolveImage(byte[,] inputImage, float[,] filter)
         {
+            int M = inputImage.GetLength(0); //Width
+            int N = inputImage.GetLength(1); // Height
+            if ((filter.GetLength(0) + filter.GetLength(1)) % 2 != 0) throw new ArgumentException("Filter size must be even");
+            if (filter.GetLength(0) != filter.GetLength(1)) throw new ArgumentException("Filter must be a square");
+            int hotspot = (filter.GetLength(0) - 1) / 2;
+
             // create temporary grayscale image
             byte[,] tempImage = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
 
-            // TODO: add your functionality and checks, think about border handling and type conversion
+            float mean_grey_value = calc_mean_value(inputImage);
 
+
+            // TODO: add your functionality and checks, think about border handling and type conversion
+            for(int row = 0; row < N; row++)
+                for(int col = 0; col < M; col++)
+                {
+                    // Apply filter on single pixel
+                    float pixel_sum = 0;
+                    for(int frow = -hotspot; frow <= hotspot; frow ++)
+                        for(int fcol = -hotspot; fcol <= hotspot; fcol++)
+                        {
+                            int r_tot = row + frow;
+                            int c_tot = col + fcol;
+                            pixel_sum += filter[frow + hotspot, fcol + hotspot] * 
+                                ((r_tot < 0 || r_tot >=N || c_tot < 0 || c_tot >= M) ? mean_grey_value : inputImage[c_tot, r_tot]);
+                        }
+                    pixel_sum = (pixel_sum < 0) ? 0 : (pixel_sum > 255) ? 255 : pixel_sum;
+                    tempImage[col, row] = (byte) pixel_sum;
+                }
             return tempImage;
+        }
+
+        private float calc_mean_value(byte[,] inputImage)
+        {
+            int M = inputImage.GetLength (0);
+            int N = inputImage.GetLength (1);
+            float sum = 0;
+            for(int i = 0; i < M; i++)
+                for(int j=0; j < N; j++)
+                    sum += inputImage[i, j];
+            float res = sum / (N * M);
+            return res;
         }
 
 
