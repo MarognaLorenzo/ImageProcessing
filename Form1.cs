@@ -226,6 +226,17 @@ namespace INFOIBV
         {
             // create temporary grayscale image
             float[,] filter = new float[size, size];
+            byte half = (byte)(size / 2);
+            for(byte x = 0; x <size; x++)
+            {
+                for (byte y = 0; y < size; y++)
+                {
+                    filter[x, y] = (float)Math.Exp(
+                        -(
+                        (Math.Pow(x - half, 2) + Math.Pow(y - half, 2))
+                        / (2 * Math.Pow(sigma, 2))));
+                }
+            }
 
             // TODO: add your functionality and checks
 
