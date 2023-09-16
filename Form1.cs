@@ -270,17 +270,7 @@ namespace INFOIBV
             int hotspot = (k_dim - 1) / 2; // Center of the kernel
 
             // kernel 180 rotation
-            if (convolve)
-            {
-                float swap;
-                for (int r = 0; r <= hotspot; r++)
-                    for (int c = 0; c < k_dim; c++)
-                    {
-                        swap = filter[c, r];
-                        filter[c, r] = filter[k_dim - c - 1, k_dim - r - 1];
-                        filter[k_dim - c - 1, k_dim - r - 1] = swap;
-                    }
-            }
+            if (convolve) rotate_filter(filter, k_dim);
 
 
             // create temporary grayscale image
@@ -310,6 +300,19 @@ namespace INFOIBV
                 }
             return tempImage;
         }
+
+        void rotate_filter(float[,] filter, int k_dim)
+        {
+            float swap;
+            int hotspot = (k_dim - 1) / 2;
+            for (int r = 0; r <= hotspot; r++)
+                for (int c = 0; c < k_dim; c++)
+                {
+                    swap = filter[c, r];
+                    filter[c, r] = filter[k_dim - c - 1, k_dim - r - 1];
+                    filter[k_dim - c - 1, k_dim - r - 1] = swap;
+                }
+        } 
 
         private float calc_mean_value(byte[,] inputImage)
         {
