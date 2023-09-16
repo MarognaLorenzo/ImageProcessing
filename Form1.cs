@@ -62,13 +62,20 @@ namespace INFOIBV
 
             byte[,] g_scale_image = convertToGrayscale(Image);          // convert image to grayscale
             byte[,] fake_workingImage = thresholdImage(g_scale_image);
-            float[,] my_filter = new float[3,3];
+
+            float[,] blur_filter = new float[3,3];
             for (int x = 0; x < 3; x++)
-                for (int y = 0; y < 3; y++)
-                    my_filter[x, y] = (float) 1 / 9;
+                  for (int y = 0; y < 3; y++)
+                     blur_filter[x, y] = (float) 1 / 9;
 
+            sbyte[,] vfilter = new sbyte[3, 3] { { -1, -1, -1 }, { 0, 0, 0 }, { 1, 1, 1 } };
+            sbyte[,] hfilter = new sbyte[3, 3] { { -1, 0, 1 }, { -1, 0, 1 }, { -1, 0, 1 } };
+            
+            
+            float[,] gf = createGaussianFilter(3, 4);
 
-            byte[,] workingImage = convolveImage(g_scale_image, my_filter);
+            byte[,] workingImage = convolveImage(g_scale_image,gf ,true);
+
             // ==================== END OF YOUR FUNCTION CALLS ====================
             // ====================================================================
 
@@ -227,6 +234,7 @@ namespace INFOIBV
             // create temporary grayscale image
             float[,] filter = new float[size, size];
             byte half = (byte)(size / 2);
+            float sum = 0;
             for(byte x = 0; x <size; x++)
             {
                 for (byte y = 0; y < size; y++)
@@ -235,10 +243,12 @@ namespace INFOIBV
                         -(
                         (Math.Pow(x - half, 2) + Math.Pow(y - half, 2))
                         / (2 * Math.Pow(sigma, 2))));
+                    sum += filter[x, y];
                 }
             }
-
-            // TODO: add your functionality and checks
+            for (byte x = 0; x < size; x++)
+                for (byte y = 0; y < size; y++)
+                    filter[x, y] /= sum;
 
             return filter;
         }
@@ -248,38 +258,55 @@ namespace INFOIBV
          * convolveImage: apply linear filtering of an input image
          * input:   inputImage          single-channel (byte) image
          *          filter              linear kernel
+         *          convolve            boolean option (true = convolution / false = correlation)
          * output:                      single-channel (byte) image
          */
-        private byte[,] convolveImage(byte[,] inputImage, float[,] filter)
+        private byte[,] convolveImage(byte[,] inputImage, float[,] filter, bool convolve)
         {
+            // Kernel processing
             int M = inputImage.GetLength(0); //Width
             int N = inputImage.GetLength(1); // Height
-            if ((filter.GetLength(0) + filter.GetLength(1)) % 2 != 0) throw new ArgumentException("Filter size must be even");
-            if (filter.GetLength(0) != filter.GetLength(1)) throw new ArgumentException("Filter must be a square");
-            int hotspot = (filter.GetLength(0) - 1) / 2;
+            int k_dim = kernel_processing(filter, M, N);
+            int hotspot = (k_dim - 1) / 2; // Center of the kernel
+
+            // kernel 180 rotation
+            if (convolve)
+            {
+                float swap;
+                for (int r = 0; r <= hotspot; r++)
+                    for (int c = 0; c < k_dim; c++)
+                    {
+                        swap = filter[c, r];
+                        filter[c, r] = filter[k_dim - c - 1, k_dim - r - 1];
+                        filter[k_dim - c - 1, k_dim - r - 1] = swap;
+                    }
+            }
+
 
             // create temporary grayscale image
             byte[,] tempImage = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
 
+            //For out of the border Pixels
             float mean_grey_value = calc_mean_value(inputImage);
 
-
-            // TODO: add your functionality and checks, think about border handling and type conversion
-            for(int row = 0; row < N; row++)
-                for(int col = 0; col < M; col++)
+            //Correlation filtering
+            for (int row = 0; row < N; row++)
+                for (int col = 0; col < M; col++)
                 {
                     // Apply filter on single pixel
-                    float pixel_sum = 0;
-                    for(int frow = -hotspot; frow <= hotspot; frow ++)
-                        for(int fcol = -hotspot; fcol <= hotspot; fcol++)
+                    float h_sum = 0; // sum all the partial values of the kernel on the image
+                    
+                    for (int frow = -hotspot; frow <= hotspot; frow++)// for each coordinate of the kernel
+                        for (int fcol = -hotspot; fcol <= hotspot; fcol++)
                         {
-                            int r_tot = row + frow;
+                            int r_tot = row + frow; 
                             int c_tot = col + fcol;
-                            pixel_sum += filter[frow + hotspot, fcol + hotspot] * 
+
+                            h_sum += filter[frow + hotspot, fcol + hotspot ] *  // sum the value to h_sum (if pixel is out of bound we use mean gray value)
                                 ((r_tot < 0 || r_tot >=N || c_tot < 0 || c_tot >= M) ? mean_grey_value : inputImage[c_tot, r_tot]);
                         }
-                    pixel_sum = (pixel_sum < 0) ? 0 : (pixel_sum > 255) ? 255 : pixel_sum;
-                    tempImage[col, row] = (byte) pixel_sum;
+                    h_sum = (h_sum < 0) ? 0 : (h_sum > 255) ? 255 : h_sum;
+                    tempImage[col, row] = (byte) h_sum;
                 }
             return tempImage;
         }
@@ -323,12 +350,71 @@ namespace INFOIBV
          */
         private byte[,] edgeMagnitude(byte[,] inputImage, sbyte[,] horizontalKernel, sbyte[,] verticalKernel)
         {
+            // Kernel processing
+            int M = inputImage.GetLength(0); //Width
+            int N = inputImage.GetLength(1); // Height
+
             // create temporary grayscale image
             byte[,] tempImage = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
 
-            // TODO: add your functionality and checks, think about border handling and type conversion (negative values!)
+            //kernel processing
+            float [,] hKernel = convertKernel(horizontalKernel);
+            float [,] vKernel = convertKernel(verticalKernel);
+            int k_dim = kernel_processing(hKernel, M, N);
+            if (k_dim != kernel_processing(vKernel, M, N)) throw new ArgumentException(" Kernels has to be the same size"); 
+
+            int hotspot = (k_dim - 1) / 2; // Center of the 
+
+            //For out of the border Pixels
+            float mean_grey_value = calc_mean_value(inputImage);
+
+
+            //Correlation filtering
+            for (int row = 0; row < N; row++)
+                for (int col = 0; col < M; col++)
+                {
+                    // Apply filter on single pixel
+                    float h_sum = 0; // sum all the partial values of the kernel on the image
+                    float v_sum = 0;
+
+                    for (int frow = -hotspot; frow <= hotspot; frow++)// for each coordinate of the kernel
+                        for (int fcol = -hotspot; fcol <= hotspot; fcol++)
+                        {
+                            int r_tot = row + frow;
+                            int c_tot = col + fcol;
+
+                            h_sum += hKernel[frow + hotspot, fcol + hotspot] *  // sum the value to h_sum (if pixel is out of bound we use mean gray value)
+                                ((r_tot < 0 || r_tot >= N || c_tot < 0 || c_tot >= M) ? mean_grey_value : inputImage[c_tot, r_tot]);
+
+                            v_sum += vKernel[frow + hotspot, fcol + hotspot] *  // sum the value to v_sum (if pixel is out of bound we use mean gray value)
+                               ((r_tot < 0 || r_tot >= N || c_tot < 0 || c_tot >= M) ? mean_grey_value : inputImage[c_tot, r_tot]);
+
+
+                        }
+
+                    float vect_sum = (float) Math.Sqrt(Math.Pow(h_sum, 2) + Math.Pow(v_sum, 2));
+                    vect_sum = Math.Max(Math.Min(vect_sum, 255), 0);
+                    tempImage[col, row] = (byte) vect_sum;
+                }
 
             return tempImage;
+        }
+
+        int kernel_processing(float[,] kernel, int Width, int Height)
+        {
+            if ((kernel.GetLength(0) + kernel.GetLength(1)) % 2 != 0) throw new ArgumentException("Filter size must be even");
+            if (kernel.GetLength(0) != kernel.GetLength(1)) throw new ArgumentException("Filter must be a square");
+            
+            return kernel.GetLength(0);
+        }
+
+        float[,] convertKernel(sbyte[,] kernel)
+        {
+            float[,] newk = new float[kernel.GetLength(0), kernel.GetLength(1)];
+            for(int i = 0; i < kernel.GetLength(0); i++)
+                for(int j = 0; j < kernel.GetLength(1); j++)
+                    newk[i, j] = (float)kernel[i, j];
+            return newk;
         }
 
 
