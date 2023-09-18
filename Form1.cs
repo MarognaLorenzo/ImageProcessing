@@ -60,21 +60,38 @@ namespace INFOIBV
             // Alternatively you can create buttons to invoke certain functionality
             // ====================================================================
 
-            byte[,] g_scale_image = convertToGrayscale(Image);          // convert image to grayscale
-            byte[,] fake_workingImage = thresholdImage(g_scale_image);
-
-            float[,] blur_filter = new float[3,3];
-            for (int x = 0; x < 3; x++)
-                  for (int y = 0; y < 3; y++)
-                     blur_filter[x, y] = (float) 1 / 9;
-
             sbyte[,] vfilter = new sbyte[3, 3] { { -1, -1, -1 }, { 0, 0, 0 }, { 1, 1, 1 } };
             sbyte[,] hfilter = new sbyte[3, 3] { { -1, 0, 1 }, { -1, 0, 1 }, { -1, 0, 1 } };
-            
-            
-            float[,] gf = createGaussianFilter(3, 4);
 
-            byte[,] workingImage = convolveImage(g_scale_image,gf ,true);
+            
+            byte[,] g_scale_image = convertToGrayscale(Image);          // convert image to grayscale
+
+            byte[,] image_a = adjustContrast(g_scale_image); // IMAGE A
+
+            byte[,] gauss_filter = convolveImage(image_a, createGaussianFilter(5, 5), false);
+
+            byte[,] edge_det = edgeMagnitude(gauss_filter, hfilter, vfilter);
+
+            byte[,] image_b = thresholdImage(edge_det, 70);// IMAGE B
+
+            byte filter_size;
+
+            byte[,] workingImage;
+
+            workingImage = new byte[0,0];
+
+            byte[,] prep_d, image_d;
+
+            for(byte i = 1; i <= 5; i++)
+            {
+                filter_size = (byte) (2 * i + 1); // 5 - 7 - 9 - 11
+                prep_d = convolveImage(image_a, createGaussianFilter(filter_size, filter_size), false);
+                prep_d = edgeMagnitude(prep_d, hfilter, vfilter);
+                image_d = thresholdImage(prep_d, 70);
+                if (i == 5) workingImage = image_d;
+            }
+
+
 
             // ==================== END OF YOUR FUNCTION CALLS ====================
             // ====================================================================
@@ -424,9 +441,10 @@ namespace INFOIBV
         /*
          * thresholdImage: threshold a grayscale image
          * input:   inputImage          single-channel (byte) image
+         *          th                  threshold value to use
          * output:                      single-channel (byte) image with on/off values
          */
-        private byte[,] thresholdImage(byte[,] inputImage)
+        private byte[,] thresholdImage(byte[,] inputImage, int th)
         {
             // create temporary grayscale image
             byte[,] tempImage = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
@@ -445,7 +463,7 @@ namespace INFOIBV
                 for (int y = 0; y < InputImage.Size.Height; y++)            // loop over rows
                 {
                     // get pixel color
-                    tempImage[x, y] = (byte) (inputImage[x,y] >= 127 ? 0 : 255);
+                    tempImage[x, y] = (byte) (inputImage[x,y] >= th ? 255 : 0);
                     progressBar.PerformStep();                              // increment progress bar
                 }
 
