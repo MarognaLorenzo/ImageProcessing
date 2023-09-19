@@ -59,7 +59,7 @@ namespace INFOIBV
             // =================== YOUR FUNCTION CALLS GO HERE ====================
             // Alternatively you can create buttons to invoke certain functionality
             // ====================================================================
-
+            
             sbyte[,] vfilter = new sbyte[3, 3] { { -1, -1, -1 }, { 0, 0, 0 }, { 1, 1, 1 } };
             sbyte[,] hfilter = new sbyte[3, 3] { { -1, 0, 1 }, { -1, 0, 1 }, { -1, 0, 1 } };
 
@@ -90,8 +90,7 @@ namespace INFOIBV
                 image_d = thresholdImage(prep_d, 70);
                 if (i == 5) workingImage = image_d;
             }
-
-
+            
 
             // ==================== END OF YOUR FUNCTION CALLS ====================
             // ====================================================================
@@ -354,6 +353,64 @@ namespace INFOIBV
         {
             // create temporary grayscale image
             byte[,] tempImage = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
+            byte half = (byte)(size / 2), tm, fx, fy;
+            byte[] ar;
+            int counter;
+
+            for(int x = 0; x < inputImage.GetLength(0); x++)
+            {
+                if (x < half)
+                {
+                    fx = (byte)(size - half + x);
+                }
+                else if(x >= inputImage.GetLength(0) - half)
+                {
+                    fx = (byte)(size - (half + x - inputImage.GetLength(0) - 1));
+                }
+                else
+                {
+                    fx = size;
+                }
+                for (int y = 0; y < inputImage.GetLength(1); y++)
+                {
+                    if (y < half)
+                    {
+                        fy = (byte)(size - half + y);
+                    }
+                    else if (y >= inputImage.GetLength(1) - half)
+                    {
+                        fy = (byte)(size - (half + y - inputImage.GetLength(1) - 1));
+                    }
+                    else
+                    {
+                        fy = size;
+                    }
+                    ar = new byte[(fx * fy)];
+                    counter = 0;
+                    for(int l = -half; l <= half; l++)
+                    {
+                        for (int h = -half; h <= half; h++)
+                        {
+                            if(x < -l || y < -h)
+                            {
+                                continue;
+                            }
+                            else if(x + l >= inputImage.GetLength(0) || y + h >= inputImage.GetLength(1))
+                            {
+                                continue;
+                            }
+                            else
+                            {
+                                ar[counter] = inputImage[(x + l), (y + h)];
+                                counter++;
+                            }
+                        }
+                    }
+
+                    Array.Sort(ar);
+                    tempImage[x, y] = ar[ar.Length / 2];
+                }
+            }
 
             // TODO: add your functionality and checks, think about border handling and type conversion
 
