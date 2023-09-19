@@ -14,6 +14,8 @@ namespace INFOIBV
     {
         private Bitmap InputImage;
         private Bitmap OutputImage;
+        sbyte[,] vfilter = new sbyte[3, 3] { { -1, -1, -1 }, { 0, 0, 0 }, { 1, 1, 1 } };
+        sbyte[,] hfilter = new sbyte[3, 3] { { -1, 0, 1 }, { -1, 0, 1 }, { -1, 0, 1 } };
 
         public INFOIBV()
         {
@@ -128,7 +130,12 @@ namespace INFOIBV
 
             byte[,] g_scale_image = convertToGrayscale(Image);          // convert image to grayscale
 
-            byte[,] workingImage = adjustContrast(g_scale_image); // IMAGE 
+            byte[,] med_filter = medianFilter(g_scale_image, 5);
+
+            byte[,] edge_det = edgeMagnitude(med_filter, hfilter, vfilter);
+            byte[,] image_c = thresholdImage(edge_det, 80);
+
+            byte[,] workingImage = image_c; 
 
 
             // ==================== END OF YOUR FUNCTION CALLS ====================
@@ -568,7 +575,7 @@ namespace INFOIBV
             return tempImage;
         }
 
-        
+
         // ====================================================================
         // ============= YOUR FUNCTIONS FOR ASSIGNMENT 2 GO HERE ==============
         // ====================================================================
