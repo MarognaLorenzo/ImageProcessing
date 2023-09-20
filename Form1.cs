@@ -14,8 +14,13 @@ namespace INFOIBV
     {
         private Bitmap InputImage;
         private Bitmap OutputImage;
-        sbyte[,] vfilter = new sbyte[3, 3] { { -1, -1, -1 }, { 0, 0, 0 }, { 1, 1, 1 } };
-        sbyte[,] hfilter = new sbyte[3, 3] { { -1, 0, 1 }, { -1, 0, 1 }, { -1, 0, 1 } };
+        sbyte[,] vfilter = new sbyte[3, 3] { { -1, -1, -1 },
+                                             {  0 , 0,  0 },
+                                             {  1,  1,  1 } };
+
+        sbyte[,] hfilter = new sbyte[3, 3] { { -1, 0, 1 },
+                                             { -1, 0, 1 },
+                                             { -1, 0, 1 } };
 
         public INFOIBV()
         {
@@ -130,10 +135,11 @@ namespace INFOIBV
 
             byte[,] g_scale_image = convertToGrayscale(Image);          // convert image to grayscale
 
-            byte[,] med_filter = medianFilter(g_scale_image, 5);
+            //byte[,] med_filter = medianFilter(g_scale_image, 5);
 
-            byte[,] edge_det = edgeMagnitude(med_filter, hfilter, vfilter);
-            byte[,] image_c = thresholdImage(edge_det, 80);
+            byte[,] edge_det = edgeMagnitude(g_scale_image, hfilter, vfilter);
+            
+            byte[,] image_c = thresholdImage(edge_det, 10);
 
             byte[,] workingImage = image_c; 
 
@@ -514,6 +520,8 @@ namespace INFOIBV
 
 
                         }
+                    h_sum /= 6;
+                    v_sum /= 6;
 
                     float vect_sum = (float) Math.Sqrt(Math.Pow(h_sum, 2) + Math.Pow(v_sum, 2));
                     vect_sum = Math.Max(Math.Min(vect_sum, 255), 0);
