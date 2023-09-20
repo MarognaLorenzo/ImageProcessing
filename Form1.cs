@@ -137,11 +137,9 @@ namespace INFOIBV
 
             //byte[,] med_filter = medianFilter(g_scale_image, 5);
 
-            byte[,] edge_det = edgeMagnitude(g_scale_image, hfilter, vfilter);
-            
-            byte[,] image_c = thresholdImage(edge_det, 10);
+            byte[,] sharpened = edge_sharpening(g_scale_image, 4, 4);
 
-            byte[,] workingImage = image_c; 
+            byte[,] workingImage = sharpened; 
 
 
             // ==================== END OF YOUR FUNCTION CALLS ====================
@@ -492,9 +490,9 @@ namespace INFOIBV
             int k_dim = kernel_processing(hKernel, M, N);
             if (k_dim != kernel_processing(vKernel, M, N)) throw new ArgumentException(" Kernels has to be the same size"); 
 
-            int hotspot = (k_dim - 1) / 2; // Center of the 
+            int hotspot = (k_dim - 1) / 2; // Center of the filter
 
-            //For out of the border Pixels
+            //For piels out of the border
             float mean_grey_value = calc_mean_value(inputImage);
 
 
@@ -581,6 +579,24 @@ namespace INFOIBV
             progressBar.Visible = false;
 
             return tempImage;
+        }
+
+        private byte[,] edge_sharpening(byte[,] inputImage, int a, int sigma)
+        {
+            // create temporary grayscale image
+            byte[,] smooth = convolveImage(inputImage, createGaussianFilter(3,sigma), false);
+            byte[,] temp_image = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
+            int mask, tmp;
+            for(int c = 0; c < inputImage.GetLength(0); c++)
+                for (int r = 0; r < inputImage.GetLength(1); r++)
+                {
+                    mask = inputImage[c,r] - smooth[c,r] ;
+                    tmp = (int)inputImage[c,r] + a * mask;
+                    temp_image[c,r] = (byte) (tmp > 255 ? 255 : tmp < 0 ? 0 : tmp) ;
+                }
+
+            return temp_image;
+
         }
 
 
