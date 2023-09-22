@@ -72,7 +72,7 @@ namespace INFOIBV
 
             
             byte[,] g_scale_image = convertToGrayscale(Image);          // convert image to grayscale
-            
+            /*
             byte[,] image_a = adjustContrast(g_scale_image); // IMAGE A
 
             byte[,] gauss_filter = convolveImage(image_a, createGaussianFilter(5, 5), false);
@@ -97,7 +97,10 @@ namespace INFOIBV
                 image_d = thresholdImage(prep_d, 70);
                 if (i == 5) workingImage = image_d;
             }
-            
+            */
+
+            byte[,] workingImage = normalize(g_scale_image);
+
             // ==================== END OF YOUR FUNCTION CALLS ====================
             // ====================================================================
 
@@ -504,7 +507,7 @@ namespace INFOIBV
                 {
                     decimal inter = pix[inputImage[x, y]] / pixls;
                     tempImage[x, y] = (byte)(
-                        (pix[inputImage[x, y]] * inputImage[x, y]) / pixls);
+                        (pix[inputImage[x, y]] * 255) / pixls);
                     
                 }
             }
