@@ -14,6 +14,13 @@ namespace INFOIBV
     {
         private Bitmap InputImage;
         private Bitmap OutputImage;
+        sbyte[,] vfilter = new sbyte[3, 3] { { -1, -1, -1 },
+                                             {  0 , 0,  0 },
+                                             {  1,  1,  1 } };
+
+        sbyte[,] hfilter = new sbyte[3, 3] { { -1, 0, 1 },
+                                             { -1, 0, 1 },
+                                             { -1, 0, 1 } };
 
         public INFOIBV()
         {
@@ -41,9 +48,9 @@ namespace INFOIBV
 
 
         /*
-         * applyButton_Click: process when user clicks "Apply" button
+         * applyButton_Click: process when user clicks "Apply1" button
          */
-        private void applyButton_Click(object sender, EventArgs e)
+        private void applyButton1_Click(object sender, EventArgs e)
         {
             if (InputImage == null) return;                                 // get out if no input image
             if (OutputImage != null) OutputImage.Dispose();                 // reset output image
@@ -104,6 +111,49 @@ namespace INFOIBV
                     OutputImage.SetPixel(x, y, newColor);                  // set the pixel color at coordinate (x,y)
                 }
             
+            pictureBox2.Image = (Image)OutputImage;                         // display output image
+        }
+
+        private void applyButton2_Click(object sender, EventArgs e)
+        {
+            if (InputImage == null) return;                                 // get out if no input image
+            if (OutputImage != null) OutputImage.Dispose();                 // reset output image
+            OutputImage = new Bitmap(InputImage.Size.Width, InputImage.Size.Height); // create new output image
+            Color[,] Image = new Color[InputImage.Size.Width, InputImage.Size.Height]; // create array to speed-up operations (Bitmap functions are very slow)
+
+            // copy input Bitmap to array            
+            for (int x = 0; x < InputImage.Size.Width; x++)                 // loop over columns
+                for (int y = 0; y < InputImage.Size.Height; y++)            // loop over rows
+                    Image[x, y] = InputImage.GetPixel(x, y);                // set pixel color in array at (x,y)
+
+            // ====================================================================
+            // =================== YOUR FUNCTION CALLS GO HERE ====================
+            // Alternatively you can create buttons to invoke certain functionality
+            // ====================================================================
+
+
+            byte[,] g_scale_image = convertToGrayscale(Image);          // convert image to grayscale
+
+            //byte[,] med_filter = medianFilter(g_scale_image, 5);
+
+            byte[,] sharpened = edge_sharpening(g_scale_image, 4, 4);
+
+            byte[,] workingImage = sharpened; 
+
+
+            // ==================== END OF YOUR FUNCTION CALLS ====================
+            // ====================================================================
+
+            // copy array to output Bitmap
+            for (
+
+                int x = 0; x < workingImage.GetLength(0); x++)             // loop over columns
+                for (int y = 0; y < workingImage.GetLength(1); y++)         // loop over rows
+                {
+                    Color newColor = Color.FromArgb(workingImage[x, y], workingImage[x, y], workingImage[x, y]);
+                    OutputImage.SetPixel(x, y, newColor);                  // set the pixel color at coordinate (x,y)
+                }
+
             pictureBox2.Image = (Image)OutputImage;                         // display output image
         }
 
@@ -485,9 +535,9 @@ namespace INFOIBV
             int k_dim = kernel_processing(hKernel, M, N);
             if (k_dim != kernel_processing(vKernel, M, N)) throw new ArgumentException(" Kernels has to be the same size"); 
 
-            int hotspot = (k_dim - 1) / 2; // Center of the 
+            int hotspot = (k_dim - 1) / 2; // Center of the filter
 
-            //For out of the border Pixels
+            //For piels out of the border
             float mean_grey_value = calc_mean_value(inputImage);
 
 
@@ -513,6 +563,8 @@ namespace INFOIBV
 
 
                         }
+                    h_sum /= 6;
+                    v_sum /= 6;
 
                     float vect_sum = (float) Math.Sqrt(Math.Pow(h_sum, 2) + Math.Pow(v_sum, 2));
                     vect_sum = Math.Max(Math.Min(vect_sum, 255), 0);
@@ -574,7 +626,25 @@ namespace INFOIBV
             return tempImage;
         }
 
-        
+        private byte[,] edge_sharpening(byte[,] inputImage, int a, int sigma)
+        {
+            // create temporary grayscale image
+            byte[,] smooth = convolveImage(inputImage, createGaussianFilter(3,sigma), false);
+            byte[,] temp_image = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
+            int mask, tmp;
+            for(int c = 0; c < inputImage.GetLength(0); c++)
+                for (int r = 0; r < inputImage.GetLength(1); r++)
+                {
+                    mask = inputImage[c,r] - smooth[c,r] ;
+                    tmp = (int)inputImage[c,r] + a * mask;
+                    temp_image[c,r] = (byte) (tmp > 255 ? 255 : tmp < 0 ? 0 : tmp) ;
+                }
+
+            return temp_image;
+
+        }
+
+
         // ====================================================================
         // ============= YOUR FUNCTIONS FOR ASSIGNMENT 2 GO HERE ==============
         // ====================================================================
