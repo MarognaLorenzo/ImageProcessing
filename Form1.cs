@@ -65,7 +65,7 @@ namespace INFOIBV
 
             
             byte[,] g_scale_image = convertToGrayscale(Image);          // convert image to grayscale
-
+            
             byte[,] image_a = adjustContrast(g_scale_image); // IMAGE A
 
             byte[,] gauss_filter = convolveImage(image_a, createGaussianFilter(5, 5), false);
@@ -91,7 +91,6 @@ namespace INFOIBV
                 if (i == 5) workingImage = image_d;
             }
             
-
             // ==================== END OF YOUR FUNCTION CALLS ====================
             // ====================================================================
 
@@ -353,7 +352,7 @@ namespace INFOIBV
         {
             // create temporary grayscale image
             byte[,] tempImage = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
-            byte half = (byte)(size / 2), tm, fx, fy;
+            byte half = (byte)(size / 2), fx, fy;
             byte[] ar;
             int counter;
 
@@ -413,6 +412,52 @@ namespace INFOIBV
             }
 
             // TODO: add your functionality and checks, think about border handling and type conversion
+
+            return tempImage;
+        }
+
+        private byte[,] normalize(byte[,] inputImage)
+        {
+            byte[,] tempImage = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
+            int pixls = inputImage.GetLength(0) * inputImage.GetLength(1);
+            int[] pix = new int[256];
+
+            for(int i = 0; i < 256; i++)
+            {
+                pix[i] = 0;
+            }
+
+            for(int x = 0; x < inputImage.GetLength(0); x++)
+            {
+                for (int y = 0; y < inputImage.GetLength(1); y++)
+                {
+                    pix[inputImage[x, y]]++;
+                }
+            }
+
+
+            for (int i = 0; i < 256; i++)
+            {
+                if(i == 0)
+                {
+                    continue;
+                }
+                else
+                {
+                    pix[i] += pix[i-1];
+                }
+            }
+
+            for (int x = 0; x < inputImage.GetLength(0); x++)
+            {
+                for (int y = 0; y < inputImage.GetLength(1); y++)
+                {
+                    decimal inter = pix[inputImage[x, y]] / pixls;
+                    tempImage[x, y] = (byte)(
+                        (pix[inputImage[x, y]] * inputImage[x, y]) / pixls);
+                    
+                }
+            }
 
             return tempImage;
         }
