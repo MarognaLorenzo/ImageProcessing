@@ -99,7 +99,11 @@ namespace INFOIBV
             }
             */
 
-            byte[,] workingImage = normalize(g_scale_image);
+            byte[,] Gausian = convolveImage(g_scale_image, createGaussianFilter(11, 11), false);
+
+            byte[,] Edge = edgeMagnitude(Gausian, hfilter, vfilter);
+
+            byte[,] workingImage = thresholdImage(Edge, 70);
 
             // ==================== END OF YOUR FUNCTION CALLS ====================
             // ====================================================================
@@ -409,8 +413,17 @@ namespace INFOIBV
             byte[] ar;
             int counter;
 
-            for(int x = 0; x < inputImage.GetLength(0); x++)
+            //Setup progress bar.
+            progressBar.Visible = true;
+            progressBar.Minimum = 1;
+            progressBar.Maximum = InputImage.Size.Width * InputImage.Size.Height;
+            progressBar.Value = 1;
+            progressBar.Step = 1;
+
+            //double forloop for functionality.
+            for (int x = 0; x < inputImage.GetLength(0); x++)
             {
+                //boundries of the area for which the median will be decided.
                 if (x < half)
                 {
                     fx = (byte)(size - half + x);
@@ -439,6 +452,7 @@ namespace INFOIBV
                     }
                     ar = new byte[(fx * fy)];
                     counter = 0;
+                    //double forloop, collect values within searcharea.
                     for(int l = -half; l <= half; l++)
                     {
                         for (int h = -half; h <= half; h++)
@@ -459,27 +473,43 @@ namespace INFOIBV
                         }
                     }
 
+                    //Sort array with the values from the searcharea and determine the median
                     Array.Sort(ar);
                     tempImage[x, y] = ar[ar.Length / 2];
+                    progressBar.PerformStep();
                 }
             }
 
-            // TODO: add your functionality and checks, think about border handling and type conversion
-
+            progressBar.Visible = false;
             return tempImage;
         }
 
+
+        /*
+         * Normalise: Equalises the histogram of an image.
+         * input:   inputImage          single-channel (byte) image
+         * output:                      single-channel (byte) image
+         */
         private byte[,] normalize(byte[,] inputImage)
         {
             byte[,] tempImage = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
             int pixls = inputImage.GetLength(0) * inputImage.GetLength(1);
-            int[] pix = new int[256];
+            int[] pix = new int[256]; //pix: Array used to represent the histgram.
 
-            for(int i = 0; i < 256; i++)
+            //Setup progress bar.
+            progressBar.Visible = true;
+            progressBar.Minimum = 1;
+            progressBar.Maximum = InputImage.Size.Width * InputImage.Size.Height;
+            progressBar.Value = 1;
+            progressBar.Step = 1;
+
+            //orloop to set all values in pix to 0.
+            for (int i = 0; i < 256; i++)
             {
                 pix[i] = 0;
             }
 
+            //Double for-loop to collect the values for the histogram.
             for(int x = 0; x < inputImage.GetLength(0); x++)
             {
                 for (int y = 0; y < inputImage.GetLength(1); y++)
@@ -488,7 +518,7 @@ namespace INFOIBV
                 }
             }
 
-
+            //Two consecutive for-loops to turn pix into a cumulative histogram.
             for (int i = 0; i < 256; i++)
             {
                 if(i == 0)
@@ -500,17 +530,23 @@ namespace INFOIBV
                     pix[i] += pix[i-1];
                 }
             }
+            for (int i = 0; i < 256; i++)
+            {
+                pix[i] = (pix[i] * 255) / pixls;
+            }
 
+            //double for-loop yo generate the new image.
             for (int x = 0; x < inputImage.GetLength(0); x++)
             {
                 for (int y = 0; y < inputImage.GetLength(1); y++)
                 {
-                    decimal inter = pix[inputImage[x, y]] / pixls;
-                    tempImage[x, y] = (byte)(
-                        (pix[inputImage[x, y]] * 255) / pixls);
-                    
+                    tempImage[x, y] = (byte)(pix[inputImage[x, y]]);
+                    progressBar.PerformStep();
+
                 }
             }
+
+            progressBar.Visible = false;
 
             return tempImage;
         }
@@ -566,8 +602,8 @@ namespace INFOIBV
 
 
                         }
-                    h_sum /= 6;
-                    v_sum /= 6;
+                    //h_sum /= 6;
+                    //v_sum /= 6;
 
                     float vect_sum = (float) Math.Sqrt(Math.Pow(h_sum, 2) + Math.Pow(v_sum, 2));
                     vect_sum = Math.Max(Math.Min(vect_sum, 255), 0);
