@@ -87,7 +87,7 @@
             this.applyButton.TabIndex = 3;
             this.applyButton.Text = "ImageB";
             this.applyButton.UseVisualStyleBackColor = true;
-            this.applyButton.Click += new System.EventHandler(this.applyButton1_Click);
+            this.applyButton.Click += new System.EventHandler(this.image_b_ButtonClick);
             // 
             // saveImageDialog
             // 
@@ -134,7 +134,7 @@
             this.ApplyButton2.TabIndex = 7;
             this.ApplyButton2.Text = "ImageC";
             this.ApplyButton2.UseVisualStyleBackColor = true;
-            this.ApplyButton2.Click += new System.EventHandler(this.applyButton2_Click);
+            this.ApplyButton2.Click += new System.EventHandler(this.image_c_ButtonClick);
             // 
             // INFOIBV
             // 
