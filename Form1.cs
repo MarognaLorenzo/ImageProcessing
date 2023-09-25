@@ -14,11 +14,11 @@ namespace INFOIBV
     {
         private Bitmap InputImage;
         private Bitmap OutputImage;
-        sbyte[,] vfilter = new sbyte[3, 3] { { -1, -1, -1 },
+        sbyte[,] vPrewittfilter = new sbyte[3, 3] { { -1, -1, -1 },
                                              {  0 , 0,  0 },
                                              {  1,  1,  1 } };
 
-        sbyte[,] hfilter = new sbyte[3, 3] { { -1, 0, 1 },
+        sbyte[,] hPrewittfilter = new sbyte[3, 3] { { -1, 0, 1 },
                                              { -1, 0, 1 },
                                              { -1, 0, 1 } };
 
@@ -48,9 +48,9 @@ namespace INFOIBV
 
 
         /*
-         * applyButton_Click: process when user clicks "Apply1" button
+         * applyButton_Click: process when user clicks "image_b" button
          */
-        private void applyButton1_Click(object sender, EventArgs e)
+        private void image_b_ButtonClick(object sender, EventArgs e)
         {
             if (InputImage == null) return;                                 // get out if no input image
             if (OutputImage != null) OutputImage.Dispose();                 // reset output image
@@ -62,48 +62,17 @@ namespace INFOIBV
                 for (int y = 0; y < InputImage.Size.Height; y++)            // loop over rows
                     Image[x, y] = InputImage.GetPixel(x, y);                // set pixel color in array at (x,y)
 
-            // ====================================================================
-            // =================== YOUR FUNCTION CALLS GO HERE ====================
-            // Alternatively you can create buttons to invoke certain functionality
-            // ====================================================================
-            
-            sbyte[,] vfilter = new sbyte[3, 3] { { -1, -1, -1 }, { 0, 0, 0 }, { 1, 1, 1 } };
-            sbyte[,] hfilter = new sbyte[3, 3] { { -1, 0, 1 }, { -1, 0, 1 }, { -1, 0, 1 } };
-
             
             byte[,] g_scale_image = convertToGrayscale(Image);          // convert image to grayscale
-            /*
-            byte[,] image_a = adjustContrast(g_scale_image); // IMAGE A
 
-            byte[,] gauss_filter = convolveImage(image_a, createGaussianFilter(5, 5), false);
+            byte[,] gauss_filter = convolveImage(g_scale_image, createGaussianFilter(5, 5), false);
 
-            byte[,] edge_det = edgeMagnitude(gauss_filter, hfilter, vfilter);
+            byte[,] edge_det = edgeMagnitude(gauss_filter, hPrewittfilter, vPrewittfilter);
 
-            byte[,] image_b = thresholdImage(edge_det, 70);// IMAGE B
+            byte[,] image_b = thresholdImage(edge_det, 60);// IMAGE B
 
-            byte filter_size;
+            byte[,] workingImage = image_b;
 
-            byte[,] workingImage;
-
-            workingImage = new byte[0,0];
-
-            byte[,] prep_d, image_d;
-
-            for(byte i = 1; i <= 5; i++)
-            {
-                filter_size = (byte) (2 * i + 1); // 5 - 7 - 9 - 11
-                prep_d = convolveImage(image_a, createGaussianFilter(filter_size, filter_size), false);
-                prep_d = edgeMagnitude(prep_d, hfilter, vfilter);
-                image_d = thresholdImage(prep_d, 70);
-                if (i == 5) workingImage = image_d;
-            }
-            */
-
-            byte[,] Gausian = convolveImage(g_scale_image, createGaussianFilter(11, 11), false);
-
-            byte[,] Edge = edgeMagnitude(Gausian, hfilter, vfilter);
-
-            byte[,] workingImage = thresholdImage(Edge, 70);
 
             // ==================== END OF YOUR FUNCTION CALLS ====================
             // ====================================================================
@@ -121,7 +90,7 @@ namespace INFOIBV
             pictureBox2.Image = (Image)OutputImage;                         // display output image
         }
 
-        private void applyButton2_Click(object sender, EventArgs e)
+        private void image_c_ButtonClick(object sender, EventArgs e)
         {
             if (InputImage == null) return;                                 // get out if no input image
             if (OutputImage != null) OutputImage.Dispose();                 // reset output image
@@ -141,11 +110,13 @@ namespace INFOIBV
 
             byte[,] g_scale_image = convertToGrayscale(Image);          // convert image to grayscale
 
-            //byte[,] med_filter = medianFilter(g_scale_image, 5);
+            byte[,] med_filter = medianFilter(g_scale_image, 5);
 
-            byte[,] sharpened = edge_sharpening(g_scale_image, 4, 4);
+            byte[,] edge_det = edgeMagnitude(med_filter, hPrewittfilter, vPrewittfilter);
 
-            byte[,] workingImage = sharpened; 
+            byte[,] image_c = thresholdImage(edge_det, 60);
+
+            byte[,] workingImage = image_c; 
 
 
             // ==================== END OF YOUR FUNCTION CALLS ====================
@@ -235,7 +206,7 @@ namespace INFOIBV
                 for (int y = 0; y < InputImage.Size.Height; y++)            // loop over rows
                 {
                     // get pixel color
-                    tempImage[x, y] = ( byte) (255 - inputImage[x,y]);
+                    tempImage[x, y] = ( byte) (255 - inputImage[x,y]);      // invert pixel
                     progressBar.PerformStep();                              // increment progress bar
                 }
 
@@ -254,6 +225,7 @@ namespace INFOIBV
         {
             // create temporary grayscale image
             byte[,] tempImage = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
+
 
             // Calculating the histogram
 
@@ -286,10 +258,6 @@ namespace INFOIBV
                 }
 
             progressBar.Visible = false; 
-
-
-            
-            
 
             return tempImage;
         }
@@ -338,7 +306,7 @@ namespace INFOIBV
             // Kernel processing
             int M = inputImage.GetLength(0); //Width
             int N = inputImage.GetLength(1); // Height
-            int k_dim = kernel_processing(filter, M, N);
+            int k_dim = kernel_processing(filter);
             int hotspot = (k_dim - 1) / 2; // Center of the kernel
 
             // kernel 180 rotation
@@ -351,6 +319,13 @@ namespace INFOIBV
             //For out of the border Pixels
             float mean_grey_value = calc_mean_value(inputImage);
 
+            // setup progress bar
+            progressBar.Visible = true;
+            progressBar.Minimum = 1;
+            progressBar.Maximum = InputImage.Size.Width * InputImage.Size.Height;
+            progressBar.Value = 1;
+            progressBar.Step = 1;
+
             //Correlation filtering
             for (int row = 0; row < N; row++)
                 for (int col = 0; col < M; col++)
@@ -361,18 +336,26 @@ namespace INFOIBV
                     for (int frow = -hotspot; frow <= hotspot; frow++)// for each coordinate of the kernel
                         for (int fcol = -hotspot; fcol <= hotspot; fcol++)
                         {
-                            int r_tot = row + frow; 
+                            int r_tot = row + frow; // computing position of the pixel around hotspot
                             int c_tot = col + fcol;
 
                             h_sum += filter[frow + hotspot, fcol + hotspot ] *  // sum the value to h_sum (if pixel is out of bound we use mean gray value)
                                 ((r_tot < 0 || r_tot >=N || c_tot < 0 || c_tot >= M) ? mean_grey_value : inputImage[c_tot, r_tot]);
                         }
-                    h_sum = (h_sum < 0) ? 0 : (h_sum > 255) ? 255 : h_sum;
-                    tempImage[col, row] = (byte) h_sum;
+                    h_sum = Math.Max(Math.Min(h_sum, 255), 0); // map values out of range
+                    tempImage[col, row] = (byte) h_sum; // assign the value
+                    progressBar.PerformStep();
                 }
+            progressBar.Visible = false;
             return tempImage;
         }
 
+
+        /*
+        * rotate_filter: apply mirroring on vertical and horizontal axis on a filter.
+        * input:   filter              odd size squared filter of floats
+        *          k_dim               filter dimension
+        */
         void rotate_filter(float[,] filter, int k_dim)
         {
             float swap;
@@ -384,8 +367,14 @@ namespace INFOIBV
                     filter[c, r] = filter[k_dim - c - 1, k_dim - r - 1];
                     filter[k_dim - c - 1, k_dim - r - 1] = swap;
                 }
-        } 
+        }
 
+
+        /*
+        * calc_mean_value: computes the mean grey value of an image.
+        * input:   inputImage          single channel (byte) image
+        * output:  float               mean_value intensity (float)
+        */
         private float calc_mean_value(byte[,] inputImage)
         {
             int M = inputImage.GetLength (0);
@@ -571,13 +560,20 @@ namespace INFOIBV
             //kernel processing
             float [,] hKernel = convertKernel(horizontalKernel);
             float [,] vKernel = convertKernel(verticalKernel);
-            int k_dim = kernel_processing(hKernel, M, N);
-            if (k_dim != kernel_processing(vKernel, M, N)) throw new ArgumentException(" Kernels has to be the same size"); 
+            int k_dim = kernel_processing(hKernel);
+            if (k_dim != kernel_processing(vKernel)) throw new ArgumentException(" Kernels has to be the same size"); 
 
             int hotspot = (k_dim - 1) / 2; // Center of the filter
 
             //For piels out of the border
             float mean_grey_value = calc_mean_value(inputImage);
+
+            // setup progress bar
+            progressBar.Visible = true;
+            progressBar.Minimum = 1;
+            progressBar.Maximum = InputImage.Size.Width * InputImage.Size.Height;
+            progressBar.Value = 1;
+            progressBar.Step = 1;
 
 
             //Correlation filtering
@@ -602,18 +598,24 @@ namespace INFOIBV
 
 
                         }
-                    //h_sum /= 6;
-                    //v_sum /= 6;
 
                     float vect_sum = (float) Math.Sqrt(Math.Pow(h_sum, 2) + Math.Pow(v_sum, 2));
                     vect_sum = Math.Max(Math.Min(vect_sum, 255), 0);
                     tempImage[col, row] = (byte) vect_sum;
+                    progressBar.PerformStep();
                 }
+
+            progressBar.Visible = false;
 
             return tempImage;
         }
 
-        int kernel_processing(float[,] kernel, int Width, int Height)
+        /*
+         * kernel_processing: checks if the kernel is squared and with odd size and 
+         * input:   kernel              float matrix
+         * output:                      dimension (int) of the kernel
+         */
+        int kernel_processing(float[,] kernel)
         {
             if ((kernel.GetLength(0) + kernel.GetLength(1)) % 2 != 0) throw new ArgumentException("Filter size must be even");
             if (kernel.GetLength(0) != kernel.GetLength(1)) throw new ArgumentException("Filter must be a square");
@@ -621,6 +623,12 @@ namespace INFOIBV
             return kernel.GetLength(0);
         }
 
+
+        /*
+        * convert_kernel: casts every value to a floar kernel starting from a sbyte 
+        * input:   kernel              sbyte matrix
+        * output:                      float matrix
+        */
         float[,] convertKernel(sbyte[,] kernel)
         {
             float[,] newk = new float[kernel.GetLength(0), kernel.GetLength(1)];
@@ -667,18 +675,29 @@ namespace INFOIBV
 
         private byte[,] edge_sharpening(byte[,] inputImage, int a, int sigma)
         {
-            // create temporary grayscale image
+            // Create smothered image
             byte[,] smooth = convolveImage(inputImage, createGaussianFilter(3,sigma), false);
+
+            //Create temp_image to be returned
             byte[,] temp_image = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
+
+            // setup progress bar
+            progressBar.Visible = true;
+            progressBar.Minimum = 1;
+            progressBar.Maximum = InputImage.Size.Width * InputImage.Size.Height;
+            progressBar.Value = 1;
+            progressBar.Step = 1;
+
             int mask, tmp;
             for(int c = 0; c < inputImage.GetLength(0); c++)
-                for (int r = 0; r < inputImage.GetLength(1); r++)
+                for (int r = 0; r < inputImage.GetLength(1); r++) // iterate over columns and rows
                 {
-                    mask = inputImage[c,r] - smooth[c,r] ;
+                    mask = inputImage[c,r] - smooth[c,r] ; // subtract smoothered value from the original one
                     tmp = (int)inputImage[c,r] + a * mask;
-                    temp_image[c,r] = (byte) (tmp > 255 ? 255 : tmp < 0 ? 0 : tmp) ;
+                    temp_image[c, r] = (byte)Math.Max(Math.Min(tmp, 255), 0); // tmp value is the sum of the original image with a mask
+                    progressBar.PerformStep();
                 }
-
+            progressBar.Visible = false;
             return temp_image;
 
         }
