@@ -7,6 +7,10 @@ using System.Linq;
 using System.Text;
 using System.Windows.Forms;
 using System.IO;
+using System.Reflection;
+using System.Runtime.Remoting.Metadata.W3cXsd2001;
+using System.Xml.Linq;
+using System.Windows.Forms.VisualStyles;
 
 namespace INFOIBV
 {
@@ -25,6 +29,7 @@ namespace INFOIBV
         public INFOIBV()
         {
             InitializeComponent();
+            createStructuringElement(7, SEShape.Plus);
         }
 
         /*
@@ -707,10 +712,120 @@ namespace INFOIBV
         // ============= YOUR FUNCTIONS FOR ASSIGNMENT 2 GO HERE ==============
         // ====================================================================
 
+        /*
+        * createStructuringElement: takes as input the structure element shape(plus or square) and size and outputs
+        * the corresponding structure element. For the plus-shaped element, the result should be the same as an 
+        * iterative dilation of a 3x3 plus-shaped structuring element with a 3x3 plus-shaped structuring element.
+        * input:   shape               enum type of shape for SE
+        *          size                int size of the SE
+        *          binary              true if we want to create a SE for a binary image
+        * output:                      byte[,] matrix of SE
+        */
+        byte[,] createStructuringElement(int size, SEShape shape, bool binary)
+        {
+            if (shape == SEShape.Square)
+            {
+                byte[,] SE = new byte[size, size];
+                for (int r = 0; r < size; r++)
+                    for (int c = 0; c < size; c++)
+                        SE[r, c] = 1;
+                return SE;
+            }
+            if (binary)
+            {
+                byte [,] tmp_SE = { { 1 } };
+                int tmp_SE_dim = 1;
+                int n_repetition = (size - 1) / 2;
+                for (int i = 0; i < n_repetition; i++)
+                {
+                    int new_SE_dim = tmp_SE_dim + 2;
+                    byte[,] newSE = new byte[new_SE_dim, new_SE_dim];
+                    for (int r = 0; r < tmp_SE_dim; r++)
+                        for (int c = 0; c < tmp_SE_dim; c++)
+                        {
+                            if (tmp_SE[r, c] == 0) continue;
+                            newSE[r + 1, c + 1] = 1; // corresponding pixel
+                            newSE[r + 2, c + 1] = 1; //pixel below
+                            newSE[r, c + 1] = 1; //pixel over
+                            newSE[r + 1, c + 2] = 1; // pixel on the right
+                            newSE[r + 1, c] = 1; // pixel on the left
+                        }
+                    tmp_SE = newSE;
+                    tmp_SE_dim = new_SE_dim;
+                }
+                return tmp_SE;
+            } else
+            {
+                return new byte[1, 1] { { 0 } };
+            }
+        }
+
+
+        /*
+        * erosion: takes as input an image and the structure element and returns the result of the erosion
+        * input:   inputImage          single channel image
+                   SE                  general Structural Element
+                   binary              true if the input picture is a binary picture
+        * output:                      byte[,] matrix of SE
+        */
+        byte[,] erodeImage(byte[,] inputImage, byte[,] SE, bool binary)
+        {
+            return new byte [1,1] { { 0} };
+        }
+
+
+        /*
+        * dilation: takes as input an image and the structure element and returns the result of the dilation
+        * input:   inputImage          single channel image
+                   SE                  general Structural Element
+                   binary              true if the input picture is a binary picture
+        * output:                      byte[,] matrix of SE
+        */
+        byte[,] dilateImage(byte[,] inputImage, byte[,] SE, bool binary)
+        {
+            return new byte[1, 1] { { 0 } };
+        }
+
+        /*
+        * openImage: takes as input an image and the structure element and returns the result of the opening operation
+        * input:   inputImage          single channel image
+                   SE                  general Structural Element
+                   binary              true if the input picture is a binary picture
+        * output:                      byte[,] matrix of SE
+        */
+        byte[,] openImage(byte[,] inputImage, byte[,] SE, bool binary)
+        {
+            return erodeImage(dilateImage(inputImage,SE, binary), SE, binary);
+        }
+
+        /*
+        * openImage: takes as input an image and the structure element and returns the result of the opening operation
+        * input:   inputImage          single channel image
+                   SE                  general Structural Element
+                   binary              true if the input picture is a binary picture
+        * output:                      byte[,] matrix of SE
+        */
+        byte[,] openImage(byte[,] inputImage, byte[,] SE, bool binary)
+        {
+            return erodeImage(dilateImage(inputImage, SE, binary), SE, binary);
+        }
+
+
+
+
+
+
+
 
         // ====================================================================
         // ============= YOUR FUNCTIONS FOR ASSIGNMENT 3 GO HERE ==============
         // ====================================================================
 
+    }
+
+    internal enum SEShape
+    {
+        Square,
+        Plus
     }
 }
