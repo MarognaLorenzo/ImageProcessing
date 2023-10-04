@@ -1,12 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
 using System.Drawing;
-using System.Linq;
-using System.Text;
 using System.Windows.Forms;
-using System.IO;
 
 namespace INFOIBV
 {
@@ -21,9 +16,33 @@ namespace INFOIBV
         sbyte[,] hPrewittfilter = new sbyte[3, 3] { { -1, 0, 1 },
                                              { -1, 0, 1 },
                                              { -1, 0, 1 } };
+        IDictionary<int, (int, int)> contourDict = new Dictionary<int, (int, int)>()
+        {
+            { 0, (1,0)},
+            { 7, (1,-1)},
+            { 6, (0,-1)},
+            { 5, (-1,-1)},
+            { 4, (-1,0)},
+            { 3, (-1,1)},
+            { 2, (0,1)},
+            { 1, (1,1)},
+        };
 
         public INFOIBV()
         {
+            
+            byte[,] img = createStructuringElement(5,SEShape.Plus, true);
+            for (int r = 0; r < 5; r++)
+                for (int c = 0; c < 5; c++)
+                {
+                    if (img[r,c] != 0) img[r,c] = 255;
+                }
+
+            List<int> l = traceBoundary(img);
+            Console.WriteLine(l);
+            Console.WriteLine(l.Count);
+            foreach (int el in l)  Console.Write(el +" ");
+            
             InitializeComponent();
         }
 
@@ -32,7 +51,7 @@ namespace INFOIBV
          */
         private void loadImageButton_Click(object sender, EventArgs e)
         {
-           if (openImageDialog.ShowDialog() == DialogResult.OK)             // open file dialog
+            if (openImageDialog.ShowDialog() == DialogResult.OK)             // open file dialog
             {
                 string file = openImageDialog.FileName;                     // get the file name
                 imageFileName.Text = file;                                  // show file name
@@ -42,7 +61,7 @@ namespace INFOIBV
                     InputImage.Size.Height > 512 || InputImage.Size.Width > 512) // dimension check (may be removed or altered)
                     MessageBox.Show("Error in image dimensions (have to be > 0 and <= 512)");
                 else
-                    pictureBox1.Image = (Image) InputImage;                 // display input image
+                    pictureBox1.Image = (Image)InputImage;                 // display input image
             }
         }
 
@@ -62,7 +81,7 @@ namespace INFOIBV
                 for (int y = 0; y < InputImage.Size.Height; y++)            // loop over rows
                     Image[x, y] = InputImage.GetPixel(x, y);                // set pixel color in array at (x,y)
 
-            
+
             byte[,] g_scale_image = convertToGrayscale(Image);          // convert image to grayscale
 
             byte[,] gauss_filter = convolveImage(g_scale_image, createGaussianFilter(5, 5), false);
@@ -79,14 +98,14 @@ namespace INFOIBV
 
             // copy array to output Bitmap
             for (
-                
+
                 int x = 0; x < workingImage.GetLength(0); x++)             // loop over columns
                 for (int y = 0; y < workingImage.GetLength(1); y++)         // loop over rows
                 {
                     Color newColor = Color.FromArgb(workingImage[x, y], workingImage[x, y], workingImage[x, y]);
                     OutputImage.SetPixel(x, y, newColor);                  // set the pixel color at coordinate (x,y)
                 }
-            
+
             pictureBox2.Image = (Image)OutputImage;                         // display output image
         }
 
@@ -116,7 +135,7 @@ namespace INFOIBV
 
             byte[,] image_c = thresholdImage(edge_det, 60);
 
-            byte[,] workingImage = image_c; 
+            byte[,] workingImage = image_c;
 
 
             // ==================== END OF YOUR FUNCTION CALLS ====================
@@ -206,7 +225,7 @@ namespace INFOIBV
                 for (int y = 0; y < InputImage.Size.Height; y++)            // loop over rows
                 {
                     // get pixel color
-                    tempImage[x, y] = ( byte) (255 - inputImage[x,y]);      // invert pixel
+                    tempImage[x, y] = (byte)(255 - inputImage[x, y]);      // invert pixel
                     progressBar.PerformStep();                              // increment progress bar
                 }
 
@@ -229,17 +248,17 @@ namespace INFOIBV
 
             // Calculating the histogram
 
-            int [] histogram = new int[256];
+            int[] histogram = new int[256];
             for (int a = 0; a < histogram.Length; a++) histogram[a] = 0;
             for (int x = 0; x < InputImage.Size.Width; x++)                 // loop over columns
                 for (int y = 0; y < InputImage.Size.Height; y++)            // loop over rows
                     histogram[inputImage[x, y]]++;
-                        
+
             // Calculating actual contrast
             int lower_bound = 0;
-            while(histogram[lower_bound] == 0 && lower_bound < 256) lower_bound ++;
+            while (histogram[lower_bound] == 0 && lower_bound < 256) lower_bound++;
             int upper_bound = 255;
-            while(histogram[upper_bound] == 0 && upper_bound >= 0) upper_bound --;
+            while (histogram[upper_bound] == 0 && upper_bound >= 0) upper_bound--;
 
             // setup progress bar
             progressBar.Visible = true;
@@ -253,11 +272,11 @@ namespace INFOIBV
                 for (int y = 0; y < InputImage.Size.Height; y++)            // loop over rows
                 {
                     // get pixel color
-                    tempImage[x, y] = (byte) ((inputImage[x,y] - lower_bound) * (255 / (upper_bound - lower_bound))) ;
+                    tempImage[x, y] = (byte)((inputImage[x, y] - lower_bound) * (255 / (upper_bound - lower_bound)));
                     progressBar.PerformStep();                              // increment progress bar
                 }
 
-            progressBar.Visible = false; 
+            progressBar.Visible = false;
 
             return tempImage;
         }
@@ -275,7 +294,7 @@ namespace INFOIBV
             float[,] filter = new float[size, size];
             byte half = (byte)(size / 2);
             float sum = 0;
-            for(byte x = 0; x <size; x++)
+            for (byte x = 0; x < size; x++)
             {
                 for (byte y = 0; y < size; y++)
                 {
@@ -332,18 +351,18 @@ namespace INFOIBV
                 {
                     // Apply filter on single pixel
                     float h_sum = 0; // sum all the partial values of the kernel on the image
-                    
+
                     for (int frow = -hotspot; frow <= hotspot; frow++)// for each coordinate of the kernel
                         for (int fcol = -hotspot; fcol <= hotspot; fcol++)
                         {
                             int r_tot = row + frow; // computing position of the pixel around hotspot
                             int c_tot = col + fcol;
 
-                            h_sum += filter[frow + hotspot, fcol + hotspot ] *  // sum the value to h_sum (if pixel is out of bound we use mean gray value)
-                                ((r_tot < 0 || r_tot >=N || c_tot < 0 || c_tot >= M) ? mean_grey_value : inputImage[c_tot, r_tot]);
+                            h_sum += filter[frow + hotspot, fcol + hotspot] *  // sum the value to h_sum (if pixel is out of bound we use mean gray value)
+                                ((r_tot < 0 || r_tot >= N || c_tot < 0 || c_tot >= M) ? mean_grey_value : inputImage[c_tot, r_tot]);
                         }
                     h_sum = Math.Max(Math.Min(h_sum, 255), 0); // map values out of range
-                    tempImage[col, row] = (byte) h_sum; // assign the value
+                    tempImage[col, row] = (byte)h_sum; // assign the value
                     progressBar.PerformStep();
                 }
             progressBar.Visible = false;
@@ -377,11 +396,11 @@ namespace INFOIBV
         */
         private float calc_mean_value(byte[,] inputImage)
         {
-            int M = inputImage.GetLength (0);
-            int N = inputImage.GetLength (1);
+            int M = inputImage.GetLength(0);
+            int N = inputImage.GetLength(1);
             float sum = 0;
-            for(int i = 0; i < M; i++)
-                for(int j=0; j < N; j++)
+            for (int i = 0; i < M; i++)
+                for (int j = 0; j < N; j++)
                     sum += inputImage[i, j];
             float res = sum / (N * M);
             return res;
@@ -417,7 +436,7 @@ namespace INFOIBV
                 {
                     fx = (byte)(size - half + x);
                 }
-                else if(x >= inputImage.GetLength(0) - half)
+                else if (x >= inputImage.GetLength(0) - half)
                 {
                     fx = (byte)(size - (half + x - inputImage.GetLength(0) - 1));
                 }
@@ -442,15 +461,15 @@ namespace INFOIBV
                     ar = new byte[(fx * fy)];
                     counter = 0;
                     //double forloop, collect values within searcharea.
-                    for(int l = -half; l <= half; l++)
+                    for (int l = -half; l <= half; l++)
                     {
                         for (int h = -half; h <= half; h++)
                         {
-                            if(x < -l || y < -h)
+                            if (x < -l || y < -h)
                             {
                                 continue;
                             }
-                            else if(x + l >= inputImage.GetLength(0) || y + h >= inputImage.GetLength(1))
+                            else if (x + l >= inputImage.GetLength(0) || y + h >= inputImage.GetLength(1))
                             {
                                 continue;
                             }
@@ -499,7 +518,7 @@ namespace INFOIBV
             }
 
             //Double for-loop to collect the values for the histogram.
-            for(int x = 0; x < inputImage.GetLength(0); x++)
+            for (int x = 0; x < inputImage.GetLength(0); x++)
             {
                 for (int y = 0; y < inputImage.GetLength(1); y++)
                 {
@@ -510,13 +529,13 @@ namespace INFOIBV
             //Two consecutive for-loops to turn pix into a cumulative histogram.
             for (int i = 0; i < 256; i++)
             {
-                if(i == 0)
+                if (i == 0)
                 {
                     continue;
                 }
                 else
                 {
-                    pix[i] += pix[i-1];
+                    pix[i] += pix[i - 1];
                 }
             }
             for (int i = 0; i < 256; i++)
@@ -558,10 +577,10 @@ namespace INFOIBV
             byte[,] tempImage = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
 
             //kernel processing
-            float [,] hKernel = convertKernel(horizontalKernel);
-            float [,] vKernel = convertKernel(verticalKernel);
+            float[,] hKernel = convertKernel(horizontalKernel);
+            float[,] vKernel = convertKernel(verticalKernel);
             int k_dim = kernel_processing(hKernel);
-            if (k_dim != kernel_processing(vKernel)) throw new ArgumentException(" Kernels has to be the same size"); 
+            if (k_dim != kernel_processing(vKernel)) throw new ArgumentException(" Kernels has to be the same size");
 
             int hotspot = (k_dim - 1) / 2; // Center of the filter
 
@@ -599,9 +618,9 @@ namespace INFOIBV
 
                         }
 
-                    float vect_sum = (float) Math.Sqrt(Math.Pow(h_sum, 2) + Math.Pow(v_sum, 2));
+                    float vect_sum = (float)Math.Sqrt(Math.Pow(h_sum, 2) + Math.Pow(v_sum, 2));
                     vect_sum = Math.Max(Math.Min(vect_sum, 255), 0);
-                    tempImage[col, row] = (byte) vect_sum;
+                    tempImage[col, row] = (byte)vect_sum;
                     progressBar.PerformStep();
                 }
 
@@ -619,7 +638,7 @@ namespace INFOIBV
         {
             if ((kernel.GetLength(0) + kernel.GetLength(1)) % 2 != 0) throw new ArgumentException("Filter size must be even");
             if (kernel.GetLength(0) != kernel.GetLength(1)) throw new ArgumentException("Filter must be a square");
-            
+
             return kernel.GetLength(0);
         }
 
@@ -632,8 +651,8 @@ namespace INFOIBV
         float[,] convertKernel(sbyte[,] kernel)
         {
             float[,] newk = new float[kernel.GetLength(0), kernel.GetLength(1)];
-            for(int i = 0; i < kernel.GetLength(0); i++)
-                for(int j = 0; j < kernel.GetLength(1); j++)
+            for (int i = 0; i < kernel.GetLength(0); i++)
+                for (int j = 0; j < kernel.GetLength(1); j++)
                     newk[i, j] = (float)kernel[i, j];
             return newk;
         }
@@ -664,7 +683,7 @@ namespace INFOIBV
                 for (int y = 0; y < InputImage.Size.Height; y++)            // loop over rows
                 {
                     // get pixel color
-                    tempImage[x, y] = (byte) (inputImage[x,y] >= th ? 255 : 0);
+                    tempImage[x, y] = (byte)(inputImage[x, y] >= th ? 255 : 0);
                     progressBar.PerformStep();                              // increment progress bar
                 }
 
@@ -676,7 +695,7 @@ namespace INFOIBV
         private byte[,] edge_sharpening(byte[,] inputImage, int a, int sigma)
         {
             // Create smothered image
-            byte[,] smooth = convolveImage(inputImage, createGaussianFilter(3,sigma), false);
+            byte[,] smooth = convolveImage(inputImage, createGaussianFilter(3, sigma), false);
 
             //Create temp_image to be returned
             byte[,] temp_image = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
@@ -689,11 +708,11 @@ namespace INFOIBV
             progressBar.Step = 1;
 
             int mask, tmp;
-            for(int c = 0; c < inputImage.GetLength(0); c++)
+            for (int c = 0; c < inputImage.GetLength(0); c++)
                 for (int r = 0; r < inputImage.GetLength(1); r++) // iterate over columns and rows
                 {
-                    mask = inputImage[c,r] - smooth[c,r] ; // subtract smoothered value from the original one
-                    tmp = (int)inputImage[c,r] + a * mask;
+                    mask = inputImage[c, r] - smooth[c, r]; // subtract smoothered value from the original one
+                    tmp = (int)inputImage[c, r] + a * mask;
                     temp_image[c, r] = (byte)Math.Max(Math.Min(tmp, 255), 0); // tmp value is the sum of the original image with a mask
                     progressBar.PerformStep();
                 }
@@ -707,10 +726,198 @@ namespace INFOIBV
         // ============= YOUR FUNCTIONS FOR ASSIGNMENT 2 GO HERE ==============
         // ====================================================================
 
+        /*
+        * createStructuringElement: takes as input the structure element shape(plus or square) and size and outputs
+        * the corresponding structure element. For the plus-shaped element, the result should be the same as an 
+        * iterative dilation of a 3x3 plus-shaped structuring element with a 3x3 plus-shaped structuring element.
+        * input:   shape               enum type of shape for SE
+        *          size                int size of the SE
+        *          binary              true if we want to create a SE for a binary image
+        * output:                      byte[,] matrix of SE
+        */
+        byte[,] createStructuringElement(int size, SEShape shape, bool binary)
+        {
+            if (shape == SEShape.Square)
+            {
+                byte[,] SE = new byte[size, size];
+                for (int r = 0; r < size; r++)
+                    for (int c = 0; c < size; c++)
+                        SE[r, c] = 1;
+                return SE;
+            }
+            if (binary)
+            {
+                byte[,] tmp_SE = { { 1 } };
+                int tmp_SE_dim = 1;
+                int n_repetition = (size - 1) / 2;
+                for (int i = 0; i < n_repetition; i++)
+                {
+                    int new_SE_dim = tmp_SE_dim + 2;
+                    byte[,] newSE = new byte[new_SE_dim, new_SE_dim];
+                    for (int r = 0; r < tmp_SE_dim; r++)
+                        for (int c = 0; c < tmp_SE_dim; c++)
+                        {
+                            if (tmp_SE[r, c] == 0) continue;
+                            newSE[r + 1, c + 1] = 1; // corresponding pixel
+                            newSE[r + 2, c + 1] = 1; //pixel below
+                            newSE[r, c + 1] = 1; //pixel over
+                            newSE[r + 1, c + 2] = 1; // pixel on the right
+                            newSE[r + 1, c] = 1; // pixel on the left
+                        }
+                    tmp_SE = newSE;
+                    tmp_SE_dim = new_SE_dim;
+                }
+                return tmp_SE;
+            }
+            else
+            {
+                byte[,] tmp_SE = { { 0, 1, 0 },
+                                   { 1, 2, 1 },
+                                   { 0, 1, 0 } };
+                int tmp_SE_dim = 3;
+                int n_repetition = (size - tmp_SE_dim) / 2;
+                for (int i = 0; i < n_repetition; i++)
+                {
+                    int new_SE_dim = tmp_SE_dim + 2;
+                    byte[,] new_SE = new byte[new_SE_dim, new_SE_dim]; 
+                }
+                    return new byte[1, 1] { { 0 } };
+            }
+        }
+
+
+        /*
+        * erosion: takes as input an image and the structure element and returns the result of the erosion
+        * input:   inputImage          single channel image
+                   SE                  general Structural Element
+                   binary              true if the input picture is a binary picture
+        * output:                      byte[,] matrix of SE
+        */
+        byte[,] erodeImage(byte[,] inputImage, byte[,] SE, bool binary)
+        {
+            return new byte[1, 1] { { 0 } };
+        }
+
+
+        /*
+        * dilation: takes as input an image and the structure element and returns the result of the dilation
+        * input:   inputImage          single channel image
+                   SE                  general Structural Element
+                   binary              true if the input picture is a binary picture
+        * output:                      byte[,] matrix of SE
+        */
+        byte[,] dilateImage(byte[,] inputImage, byte[,] SE, bool binary)
+        {
+            return new byte[1, 1] { { 0 } };
+        }
+
+        /*
+        * openImage: takes as input an image and the structure element and returns the result of the opening operation
+        * input:   inputImage          single channel image
+                   SE                  general Structural Element
+                   binary              true if the input picture is a binary picture
+        * output:                      byte[,] matrix of SE
+        */
+        byte[,] openImage(byte[,] inputImage, byte[,] SE, bool binary)
+        {
+            return erodeImage(dilateImage(inputImage, SE, binary), SE, binary);
+        }
+
+        /*
+        * closeImage: takes as input an image and the structure element and returns the result of the closing operation
+        * input:   inputImage          single channel image
+                   SE                  general Structural Element
+                   binary              true if the input picture is a binary picture
+        * output:                      byte[,] matrix of SE
+        */
+        byte[,] closeImage(byte[,] inputImage, byte[,] SE, bool binary)
+        {
+            return dilateImage(erodeImage(inputImage, SE, binary), SE, binary);
+        }
+        //Boundary trace: implement a function(traceBoundary) that, given a binary image, 
+        //    traces the outer boundary of a foreground shape in that image.The output of 
+        //        the function is a list (choose your implementation) of(x, y)-pairs, each
+        //    corresponding to a boundary pixel. Subsequent pairs in the list should be neighboring
+        //        pixels in the image. Have a look at Book II - Chapter 2 and the code in 
+        //        Book II - B.1.4. You may assume there is only a single shape in the image,
+        //        or return only the list of the first boundary that you encounter. (10 points).
+
+        List<int> traceBoundary(byte[,] inputImage)
+        {
+            (int, int) pixel = (-10, -10);
+            int direction = 6;
+            List<int> boundary = new List<int>();
+
+
+            for(int r = 0; r < inputImage.GetLength(1); r++)
+            {
+                bool stop = false;
+                for (int c = 0; c < inputImage.GetLength(0); c++)
+                    if (inputImage[c, r] == 255)
+                    {
+                        pixel = (r, c);
+                        stop = true;
+                        break;
+                    }
+                if (stop) break;
+            }
+            (int, int) end_pixel = (-10, -10);
+            int ending_direction = -1;
+            int dir_to_look;
+            int coming_direction = -1;
+            for (int i = 0; i < 8; i++)
+            {
+                dir_to_look = (direction + i) % 8;
+                (int, int) movement_matrix_r_c = contourDict[dir_to_look];
+                int r = pixel.Item1 + movement_matrix_r_c.Item2;
+                int c = pixel.Item2 + movement_matrix_r_c.Item1;
+                if (r < 0 || r > inputImage.GetLength(1) || c < 0 || c > inputImage.GetLength(0)) continue;
+                if (inputImage[c, r] == 0) continue;
+                if (inputImage[c, r] != 255) throw new Exception("Image is not binary");
+                boundary.Add(dir_to_look);
+                ending_direction= dir_to_look;
+                coming_direction = ending_direction;
+                direction = (dir_to_look + 6) % 8;
+                pixel = (r, c);
+                end_pixel = (r, c);
+                break;
+            }
+            if (ending_direction == -1) return boundary;
+
+            int cont = 0;
+            while (true)
+            {
+                if (end_pixel == pixel && ending_direction == coming_direction)
+                {
+                    if (cont == 0) cont = 1;
+                    else return boundary;
+                }
+                for (int i = 0; i < 8; i++)
+                {
+                    dir_to_look = (direction + i) % 8;
+                    (int, int) movement_matrix_r_c = contourDict[dir_to_look];
+                    int r = pixel.Item1 + movement_matrix_r_c.Item2;
+                    int c = pixel.Item2 + movement_matrix_r_c.Item1;
+                    if (r < 0 || r >= inputImage.GetLength(1) || c < 0 || c >= inputImage.GetLength(0)) continue;
+                    if (inputImage[c, r] == 0) continue;
+                    if (inputImage[c, r] != 255) throw new Exception("Image is not binary");
+                    boundary.Add(dir_to_look);
+                    direction = ( dir_to_look + 6 ) % 8;
+                    pixel = (r, c);
+                    break;
+                }
+            }
+        }
 
         // ====================================================================
         // ============= YOUR FUNCTIONS FOR ASSIGNMENT 3 GO HERE ==============
         // ====================================================================
 
+    }
+
+    internal enum SEShape
+    {
+        Square,
+        Plus
     }
 }
