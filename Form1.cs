@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Linq;
+using System.Reflection;
 using System.Windows.Forms;
 
 namespace INFOIBV
@@ -795,7 +797,86 @@ namespace INFOIBV
         */
         byte[,] erodeImage(byte[,] inputImage, byte[,] SE, bool binary)
         {
-            return new byte[1, 1] { { 0 } };
+            byte[,] temp = new byte[inputImage.GetLength(0),inputImage.GetLength(1)];
+            List<Tuple<int, int>> cords = new List<Tuple<int, int>>();
+            List<byte> tmp;
+            for(int x = 0; x < SE.GetLength(0); x++)
+            {
+                for (int y = 0; y < SE.GetLength(1); y++)
+                {
+                    if (SE[x, y] > 0)
+                    {
+                        cords.Add(new Tuple<int, int>(x - (SE.GetLength(0)/2), y - (SE.GetLength(1) / 2)));
+                    }
+                }
+            }
+
+            if (binary)
+            {
+                for (int x = 0; x < inputImage.GetLength(0); x++)
+                {
+                    for (int y = 0; y < inputImage.GetLength(1); y++)
+                    {
+                        if(inputImage[x, y] < 1)
+                        {
+                            temp[x, y] = inputImage[x, y];
+                            break;
+                        }
+                        else
+                        {
+                            temp[x, y] = inputImage[x, y];
+                        }
+                        tmp = new List<byte>();
+                        for (int z = 0; z < cords.Count; z++)
+                        {
+                            if (x + cords[z].Item1 < 0 || y + cords[z].Item2 < 0)
+                            {
+                                continue;
+                            }
+                            else if (x + cords[z].Item1 >= inputImage.GetLength(0) || y + cords[z].Item2 >= inputImage.GetLength(1))
+                            {
+                                continue;
+                            }
+                            else
+                            {
+                                if (inputImage[x + cords[z].Item1, y + cords[z].Item2] < 1)
+                                {
+                                    temp[x, y] = 0;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            else
+            {
+                for (int x = 0; x < inputImage.GetLength(0); x++)
+                {
+                    for (int y = 0; y < inputImage.GetLength(1); y++)
+                    {
+                        tmp = new List<byte>();
+                        for (int z = 0; z < cords.Count; z++)
+                        {
+                            if (x + cords[z].Item1 < 0 || y + cords[z].Item2 < 0)
+                            {
+                                continue;
+                            }
+                            else if (x + cords[z].Item1 >= inputImage.GetLength(0) || y + cords[z].Item2 >= inputImage.GetLength(1))
+                            {
+                                continue;
+                            }
+                            else
+                            {
+                                tmp.Add(inputImage[x + cords[z].Item1, y + cords[z].Item2]);
+                            }
+                        }
+                        temp[x, y] = tmp.AsQueryable().Min();
+                    }
+                }
+            }
+
+            return temp;
         }
 
 
@@ -808,8 +889,178 @@ namespace INFOIBV
         */
         byte[,] dilateImage(byte[,] inputImage, byte[,] SE, bool binary)
         {
-            return new byte[1, 1] { { 0 } };
+            byte[,] temp = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
+            List<Tuple<int, int>> cords = new List<Tuple<int, int>>();
+            List<byte> tmp;
+            for (int x = 0; x < SE.GetLength(0); x++)
+            {
+                for (int y = 0; y < SE.GetLength(1); y++)
+                {
+                    if (SE[x, y] > 0)
+                    {
+                        cords.Add(new Tuple<int, int>(x - (SE.GetLength(0) / 2), y - (SE.GetLength(1) / 2)));
+                    }
+                }
+            }
+
+            if (binary)
+            {
+                for (int x = 0; x < inputImage.GetLength(0); x++)
+                {
+                    for (int y = 0; y < inputImage.GetLength(1); y++)
+                    {
+                        if (inputImage[x, y] > 0)
+                        {
+                            temp[x, y] = inputImage[x, y];
+                            break;
+                        }
+                        else
+                        {
+                            temp[x, y] = inputImage[x, y];
+                        }
+                        tmp = new List<byte>();
+                        for (int z = 0; z < cords.Count; z++)
+                        {
+                            if (x + cords[z].Item1 < 0 || y + cords[z].Item2 < 0)
+                            {
+                                continue;
+                            }
+                            else if (x + cords[z].Item1 >= inputImage.GetLength(0) || y + cords[z].Item2 >= inputImage.GetLength(1))
+                            {
+                                continue;
+                            }
+                            else
+                            {
+                                if (inputImage[x + cords[z].Item1, y + cords[z].Item2] > 0)
+                                {
+                                    temp[x, y] = 0;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            else
+            {
+                for (int x = 0; x < inputImage.GetLength(0); x++)
+                {
+                    for (int y = 0; y < inputImage.GetLength(1); y++)
+                    {
+                        tmp = new List<byte>();
+                        for (int z = 0; z < cords.Count; z++)
+                        {
+                            if (x + cords[z].Item1 < 0 || y + cords[z].Item2 < 0)
+                            {
+                                continue;
+                            }
+                            else if (x + cords[z].Item1 >= inputImage.GetLength(0) || y + cords[z].Item2 >= inputImage.GetLength(1))
+                            {
+                                continue;
+                            }
+                            else
+                            {
+                                tmp.Add(inputImage[x + cords[z].Item1, y + cords[z].Item2]);
+                            }
+                        }
+                        temp[x, y] = tmp.AsQueryable().Max();
+                    }
+                }
+            }
+
+            return temp;
         }
+
+
+        /*
+        * countValues: takes an input image and returns the amount of distinct values and histogram of the values.
+        * input:   inputImage          single channel image
+        * output:                      int[] histogram of values
+        *                              byte amount of distinct values.
+        */
+        Tuple<byte, int[]> countValues(byte[,] inputImage)
+        {
+            int[] hist = new int[256];
+            byte ammo = 0;
+
+            for (int i = 0; i < 256; i++)
+            {
+                hist[i] = 0;
+            }
+
+            for (int x = 0; x < inputImage.GetLength(0); x++)
+            {
+                for (int y = 0; y < inputImage.GetLength(1); y++)
+                {
+                    if(hist[inputImage[x, y]] == 0)
+                    {
+                        ammo++;
+                    }
+                    hist[inputImage[x, y]]++;
+                }
+            }
+
+            return new Tuple<byte, int[]>(ammo, hist);
+        }
+
+
+        /*
+        * andImages: takes 2 input byte images and does a pointwise and funtion on each
+        * input:   inputImage1         single channel bit image
+        *          inputImage2         single channel bit image
+        * output:                      single channel bit image
+        */
+        byte[,] andImages(byte[,] inputImage1, byte[,] inputImage2)
+        {
+            byte[,] temp = new byte[inputImage1.GetLength(0), inputImage1.GetLength(1)];
+
+            for (int x = 0; x < inputImage1.GetLength(0); x++)
+            {
+                for (int y = 0; y < inputImage1.GetLength(1); y++)
+                {
+                    if (inputImage1[x,y] != 0 && inputImage2[x, y] != 0)
+                    {
+                        temp[x,y] = inputImage1[x,y];
+                    }
+                    else
+                    {
+                        temp[x, y] = 0;
+                    }
+                }
+            }
+
+            return temp;
+        }
+
+
+        /*
+        * orImages: takes 2 input byte images and does a pointwise or funtion on each
+        * input:   inputImage1         single channel bit image
+        *          inputImage2         single channel bit image
+        * output:                      single channel bit image
+        */
+        byte[,] orImages(byte[,] inputImage1, byte[,] inputImage2)
+        {
+            byte[,] temp = new byte[inputImage1.GetLength(0), inputImage1.GetLength(1)];
+
+            for (int x = 0; x < inputImage1.GetLength(0); x++)
+            {
+                for (int y = 0; y < inputImage1.GetLength(1); y++)
+                {
+                    if (inputImage1[x, y] != 0 || inputImage2[x, y] != 0)
+                    {
+                        temp[x, y] = inputImage1[x, y];
+                    }
+                    else
+                    {
+                        temp[x, y] = 0;
+                    }
+                }
+            }
+
+            return temp;
+        }
+
 
         /*
         * openImage: takes as input an image and the structure element and returns the result of the opening operation
