@@ -86,13 +86,7 @@ namespace INFOIBV
 
             byte[,] g_scale_image = convertToGrayscale(Image);          // convert image to grayscale
 
-            byte[,] gauss_filter = convolveImage(g_scale_image, createGaussianFilter(5, 5), false);
-
-            byte[,] edge_det = edgeMagnitude(gauss_filter, hPrewittfilter, vPrewittfilter);
-
-            byte[,] image_b = thresholdImage(edge_det, 60);// IMAGE B
-
-            byte[,] workingImage = image_b;
+            byte[,] workingImage = adjustContrast(g_scale_image);
 
 
             // ==================== END OF YOUR FUNCTION CALLS ====================
@@ -274,10 +268,13 @@ namespace INFOIBV
                 for (int y = 0; y < InputImage.Size.Height; y++)            // loop over rows
                 {
                     // get pixel color
-                    tempImage[x, y] = (byte)((inputImage[x, y] - lower_bound) * (255 / (upper_bound - lower_bound)));
+                    tempImage[x, y] = (byte)((inputImage[x, y] - lower_bound) *  ((float) 255 / (float)(upper_bound - lower_bound)));
                     progressBar.PerformStep();                              // increment progress bar
                 }
-
+            for (int a = 0; a < histogram.Length; a++) histogram[a] = 0;
+            for (int x = 0; x < InputImage.Size.Width; x++)                 // loop over columns
+                for (int y = 0; y < InputImage.Size.Height; y++)            // loop over rows
+                    histogram[tempImage[x, y]]++;
             progressBar.Visible = false;
 
             return tempImage;
@@ -747,44 +744,28 @@ namespace INFOIBV
                         SE[r, c] = 1;
                 return SE;
             }
-            if (binary)
+            byte[,] tmp_SE = { { 1 } };
+            int tmp_SE_dim = 1;
+            int n_repetition = (size - 1) / 2;
+            for (int i = 0; i < n_repetition; i++)
             {
-                byte[,] tmp_SE = { { 1 } };
-                int tmp_SE_dim = 1;
-                int n_repetition = (size - 1) / 2;
-                for (int i = 0; i < n_repetition; i++)
-                {
-                    int new_SE_dim = tmp_SE_dim + 2;
-                    byte[,] newSE = new byte[new_SE_dim, new_SE_dim];
-                    for (int r = 0; r < tmp_SE_dim; r++)
-                        for (int c = 0; c < tmp_SE_dim; c++)
-                        {
-                            if (tmp_SE[r, c] == 0) continue;
-                            newSE[r + 1, c + 1] = 1; // corresponding pixel
-                            newSE[r + 2, c + 1] = 1; //pixel below
-                            newSE[r, c + 1] = 1; //pixel over
-                            newSE[r + 1, c + 2] = 1; // pixel on the right
-                            newSE[r + 1, c] = 1; // pixel on the left
-                        }
-                    tmp_SE = newSE;
-                    tmp_SE_dim = new_SE_dim;
-                }
-                return tmp_SE;
+                int new_SE_dim = tmp_SE_dim + 2;
+                byte[,] newSE = new byte[new_SE_dim, new_SE_dim];
+                for (int r = 0; r < tmp_SE_dim; r++)
+                    for (int c = 0; c < tmp_SE_dim; c++)
+                    {
+                        if (tmp_SE[r, c] == 0) continue;
+                        newSE[r + 1, c + 1] = 1; // corresponding pixel
+                        newSE[r + 2, c + 1] = 1; //pixel below
+                        newSE[r, c + 1] = 1; //pixel over
+                        newSE[r + 1, c + 2] = 1; // pixel on the right
+                        newSE[r + 1, c] = 1; // pixel on the left
+                    }
+                tmp_SE = newSE;
+                tmp_SE_dim = new_SE_dim;
             }
-            else
-            {
-                byte[,] tmp_SE = { { 0, 1, 0 },
-                                   { 1, 2, 1 },
-                                   { 0, 1, 0 } };
-                int tmp_SE_dim = 3;
-                int n_repetition = (size - tmp_SE_dim) / 2;
-                for (int i = 0; i < n_repetition; i++)
-                {
-                    int new_SE_dim = tmp_SE_dim + 2;
-                    byte[,] new_SE = new byte[new_SE_dim, new_SE_dim]; 
-                }
-                    return new byte[1, 1] { { 0 } };
-            }
+            return tmp_SE;
+            
         }
 
 
