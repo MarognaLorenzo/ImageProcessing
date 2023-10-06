@@ -86,7 +86,11 @@ namespace INFOIBV
 
             byte[,] g_scale_image = convertToGrayscale(Image);          // convert image to grayscale
 
-            byte[,] workingImage = adjustContrast(g_scale_image);
+            byte[,] thresholded = thresholdImage(g_scale_image, 127);
+
+            byte[,] labels = floodFill(thresholded);
+
+            byte[,] workingImage = adjustContrast(labels);
 
 
             // ==================== END OF YOUR FUNCTION CALLS ====================
@@ -1139,6 +1143,65 @@ namespace INFOIBV
                     break;
                 }
             }
+        }
+
+
+        /*
+        * floodFill: takes as input a binary image and returns a new image with 0 value for bg pixel and id value for pixels labeled with id
+        * input:   inputImage          single channel binary image
+        * output:                      byte[,] matrix with pixel label
+        */
+        byte[,] floodFill(byte[,] inputImage)
+        {
+            byte id = 1;
+            byte[,] res = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
+            for(int r = 0; r < inputImage.GetLength(1); r ++)
+                for(int c = 0; c < inputImage.GetLength(0); c++)
+                {
+                    if (inputImage[c, r] == 0 || res[c,r] != 0) continue;
+                    Queue<(int, int)> q = new Queue<(int, int)> ();
+                    q.Enqueue((c, r));
+                    while (q.Any())
+                    {
+                        (int col,  int row) = q.Dequeue();
+                        if (col < 0 || col >= inputImage.GetLength(0) || row < 0 || row >= inputImage.GetLength(1))
+                        {
+                            continue;
+                        }
+                        if (inputImage[col, row] == 0 || res[col, row] == id)
+                        {
+                            continue;
+                        }
+                        res[col, row] = id;
+                        q.Enqueue((col + 1, row));
+                        q.Enqueue((col - 1, row));
+                        q.Enqueue((col, row +1));
+                        q.Enqueue((col, row -1));
+                    }
+                    id++;
+                }
+            return res;
+        }
+
+        void rec_flood(int c, int r,ref byte[,] inputImage,ref byte[,] res, byte id, ref List<(int, int)> added)
+        {
+            if (c < 0 || c >= inputImage.GetLength(0) || r < 0 || r >= inputImage.GetLength(1))
+            {
+                return;
+            }
+            if (inputImage[c, r] == 0 || res[c, r] == id)
+            {
+                return;
+            }
+            int prec_res_value = res[c, r];
+            res[c, r] = id;
+            added.Add((c, r));
+            int res_value = res[c, r];
+            int img_value = inputImage[c, r];
+            rec_flood(c+1,r, ref inputImage,ref res, id, ref added);
+            rec_flood(c-1,r, ref inputImage,ref res, id, ref added);
+            rec_flood(c,r+1, ref inputImage,ref res, id, ref added);
+            rec_flood(c,r-1, ref inputImage,ref res, id, ref added);
         }
 
         // ====================================================================
