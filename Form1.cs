@@ -176,7 +176,6 @@ namespace INFOIBV
 
             byte[,] workingImage = adjustContrast(labels);
 
-
             // ==================== END OF YOUR FUNCTION CALLS ====================
             // ====================================================================
 
@@ -212,18 +211,7 @@ namespace INFOIBV
 
             byte[,] thresholded = thresholdImage(g_scale_image, 127);
 
-            byte[,] labels = floodFill(thresholded);
-
-            byte[,] ES = new byte[3, 3];
-            for(int x = 0; x < ES.GetLength(0); x++)
-            {
-                for (int y = 0; y < ES.GetLength(1); y++)
-                {
-                    ES[x, y] = 1;
-                }
-            }
-
-            byte[,] workingImage = thresholded;
+            byte[,] workingImage = largest(thresholded);
 
 
             // copy array to output Bitmap
@@ -1041,6 +1029,76 @@ namespace INFOIBV
             }
 
             return new Tuple<byte, int[]>(ammo, hist);
+        }
+
+
+        /*
+        * largest: takes an input bit image and return an image with only the largest item using 4 neighbor method
+        * input:   inputImage          single channel image
+        * output:                      single channel image
+        */
+        byte[,] largest(byte[,] inputImage)
+        {
+            byte[,] labels = floodFill(inputImage);
+
+            byte[,] working = adjustContrast(labels);
+
+            Tuple<byte, int[]> tup = countValues(working);
+            tup.Item2[0] = 0;
+            byte counter = (byte)tup.Item2.ToList().IndexOf(tup.Item2.Max());
+            byte[,] temp = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
+
+
+            
+            for (int x = 0; x < inputImage.GetLength(0); x++)
+            {
+                for (int y = 0; y < inputImage.GetLength(1); y++)
+                {
+                    if (inputImage[x, y] == counter)
+                    {
+                        temp[x, y] = 255;
+                    }
+                    else
+                    {
+                        temp[x, y] = 0;
+                    }
+                }
+            }
+            
+            return temp;
+        }
+
+        byte[,] recolor(byte[,] inputImage, int x, int y, byte c)
+        {
+            byte[,] temp = inputImage;
+            temp[x, y] = c;
+            if(x == 0)
+            {
+                if (temp[x + 1, y] == 255) { temp = recolor(temp, x + 1, y, c); }
+            }
+            else if (x == inputImage.GetLength(0) - 1)
+            {
+                if (temp[x - 1, y] == 255) { temp = recolor(temp, x - 1, y, c); }
+            }
+            else
+            {
+                if (temp[x + 1, y] == 255) { temp = recolor(temp, x + 1, y, c); }
+                if (temp[x - 1, y] == 255) { temp = recolor(temp, x - 1, y, c); }
+            }
+            if (y == 0)
+            {
+                if (temp[x, y + 1] == 255) { temp = recolor(temp, x, y + 1, c); }
+            }
+            else if (y == inputImage.GetLength(1) - 1)
+            {
+                if (temp[x, y - 1] == 255) { temp = recolor(temp, x, y - 1, c); }
+            }
+            else
+            {
+                if (temp[x, y + 1] == 255) { temp = recolor(temp, x, y + 1, c); }
+                if (temp[x, y - 1] == 255) { temp = recolor(temp, x, y - 1, c); }
+            }
+            return temp;
         }
 
 
