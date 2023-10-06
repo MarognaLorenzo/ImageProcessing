@@ -213,7 +213,16 @@ namespace INFOIBV
 
             byte[,] labels = floodFill(thresholded);
 
-            byte[,] workingImage = adjustContrast(labels);
+            byte[,] ES = new byte[3, 3];
+            for(int x = 0; x < ES.GetLength(0); x++)
+            {
+                for (int y = 0; y < ES.GetLength(1); y++)
+                {
+                    ES[x, y] = 1;
+                }
+            }
+
+            byte[,] workingImage = thresholded;
 
 
             // copy array to output Bitmap
