@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Windows.Forms;
 
 namespace INFOIBV
@@ -32,19 +33,19 @@ namespace INFOIBV
 
         public INFOIBV()
         {
-            
-            byte[,] img = createStructuringElement(5,SEShape.Plus, true);
+
+            byte[,] img = createStructuringElement(5, SEShape.Plus);
             for (int r = 0; r < 5; r++)
                 for (int c = 0; c < 5; c++)
                 {
-                    if (img[r,c] != 0) img[r,c] = 255;
+                    if (img[r, c] != 0) img[r, c] = 255;
                 }
 
             List<int> l = traceBoundary(img);
             Console.WriteLine(l);
             Console.WriteLine(l.Count);
-            foreach (int el in l)  Console.Write(el +" ");
-            
+            foreach (int el in l) Console.Write(el + " ");
+
             InitializeComponent();
         }
 
@@ -133,9 +134,9 @@ namespace INFOIBV
 
             byte[,] edge_det = edgeMagnitude(med_filter, hPrewittfilter, vPrewittfilter);
 
-            byte[,] image_c = thresholdImage(edge_det, 60);
+            byte[,] thresholded = thresholdImage(edge_det, 60);
 
-            byte[,] workingImage = image_c;
+            byte[,] workingImage = closeImage(thresholded, createStructuringElement(7, SEShape.Plus), true);
 
 
             // ==================== END OF YOUR FUNCTION CALLS ====================
@@ -347,7 +348,7 @@ namespace INFOIBV
                 for (int y = 0; y < InputImage.Size.Height; y++)            // loop over rows
                 {
                     // get pixel color
-                    tempImage[x, y] = (byte)((inputImage[x, y] - lower_bound) *  ((float) 255 / (float)(upper_bound - lower_bound)));
+                    tempImage[x, y] = (byte)((inputImage[x, y] - lower_bound) * ((float)255 / (float)(upper_bound - lower_bound)));
                     progressBar.PerformStep();                              // increment progress bar
                 }
             for (int a = 0; a < histogram.Length; a++) histogram[a] = 0;
@@ -813,7 +814,7 @@ namespace INFOIBV
         *          binary              true if we want to create a SE for a binary image
         * output:                      byte[,] matrix of SE
         */
-        byte[,] createStructuringElement(int size, SEShape shape, bool binary)
+        byte[,] createStructuringElement(int size, SEShape shape)
         {
             if (shape == SEShape.Square)
             {
@@ -844,7 +845,6 @@ namespace INFOIBV
                 tmp_SE_dim = new_SE_dim;
             }
             return tmp_SE;
-            
         }
 
 
@@ -857,57 +857,47 @@ namespace INFOIBV
         */
         byte[,] erodeImage(byte[,] inputImage, byte[,] SE, bool binary)
         {
-            byte[,] temp = new byte[inputImage.GetLength(0),inputImage.GetLength(1)];
+            byte[,] temp = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
             List<Tuple<int, int>> cords = new List<Tuple<int, int>>();
             List<byte> tmp;
-            for(int x = 0; x < SE.GetLength(0); x++)
+            for (int x = 0; x < SE.GetLength(0); x++)
             {
                 for (int y = 0; y < SE.GetLength(1); y++)
                 {
                     if (SE[x, y] > 0)
                     {
-                        cords.Add(new Tuple<int, int>(x - (SE.GetLength(0)/2), y - (SE.GetLength(1) / 2)));
+                        cords.Add(new Tuple<int, int>(x - (SE.GetLength(0) / 2), y - (SE.GetLength(1) / 2)));
                     }
                 }
             }
 
             if (binary)
             {
+                if (!isBinary(inputImage)) throw new Exception("Image is not binary");
                 for (int x = 0; x < inputImage.GetLength(0); x++)
-                {
                     for (int y = 0; y < inputImage.GetLength(1); y++)
                     {
-                        if(inputImage[x, y] < 1)
-                        {
-                            temp[x, y] = inputImage[x, y];
-                            break;
-                        }
-                        else
-                        {
-                            temp[x, y] = inputImage[x, y];
-                        }
-                        tmp = new List<byte>();
+                        temp[x, y] = inputImage[x, y];
+
+                        if (inputImage[x, y] == 0) continue;
+
                         for (int z = 0; z < cords.Count; z++)
                         {
-                            if (x + cords[z].Item1 < 0 || y + cords[z].Item2 < 0)
-                            {
-                                continue;
-                            }
+                            if (x + cords[z].Item1 < 0 || y + cords[z].Item2 < 0) continue;
+
                             else if (x + cords[z].Item1 >= inputImage.GetLength(0) || y + cords[z].Item2 >= inputImage.GetLength(1))
                             {
                                 continue;
                             }
-                            else
+                            if (inputImage[x + cords[z].Item1, y + cords[z].Item2] == 0)
                             {
-                                if (inputImage[x + cords[z].Item1, y + cords[z].Item2] < 1)
-                                {
-                                    temp[x, y] = 0;
-                                    break;
-                                }
+                                temp[x, y] = 0;
+                                break;
                             }
+
                         }
                     }
-                }
+                    
             }
             else
             {
@@ -965,41 +955,22 @@ namespace INFOIBV
 
             if (binary)
             {
+                if (!isBinary(inputImage)) throw new Exception("Image is not binary");
                 for (int x = 0; x < inputImage.GetLength(0); x++)
-                {
                     for (int y = 0; y < inputImage.GetLength(1); y++)
                     {
-                        if (inputImage[x, y] > 0)
-                        {
-                            temp[x, y] = inputImage[x, y];
-                            break;
-                        }
-                        else
-                        {
-                            temp[x, y] = inputImage[x, y];
-                        }
-                        tmp = new List<byte>();
+                        if (inputImage[x, y] == 0) { continue; }
+
                         for (int z = 0; z < cords.Count; z++)
                         {
-                            if (x + cords[z].Item1 < 0 || y + cords[z].Item2 < 0)
-                            {
-                                continue;
-                            }
+                            if (x + cords[z].Item1 < 0 || y + cords[z].Item2 < 0) continue;
                             else if (x + cords[z].Item1 >= inputImage.GetLength(0) || y + cords[z].Item2 >= inputImage.GetLength(1))
                             {
                                 continue;
                             }
-                            else
-                            {
-                                if (inputImage[x + cords[z].Item1, y + cords[z].Item2] > 0)
-                                {
-                                    temp[x, y] = 0;
-                                    break;
-                                }
-                            }
+                            else temp[x + cords[z].Item1, y + cords[z].Item2] = 255;
                         }
                     }
-                }
             }
             else
             {
@@ -1052,7 +1023,7 @@ namespace INFOIBV
             {
                 for (int y = 0; y < inputImage.GetLength(1); y++)
                 {
-                    if(hist[inputImage[x, y]] == 0)
+                    if (hist[inputImage[x, y]] == 0)
                     {
                         ammo++;
                     }
@@ -1072,15 +1043,19 @@ namespace INFOIBV
         */
         byte[,] andImages(byte[,] inputImage1, byte[,] inputImage2)
         {
+            if (!isBinary(inputImage1)) throw new Exception("Image1 is not binary");
+            if (!isBinary(inputImage2)) throw new Exception("Image2 is not binary");
+
+
             byte[,] temp = new byte[inputImage1.GetLength(0), inputImage1.GetLength(1)];
 
             for (int x = 0; x < inputImage1.GetLength(0); x++)
             {
                 for (int y = 0; y < inputImage1.GetLength(1); y++)
                 {
-                    if (inputImage1[x,y] != 0 && inputImage2[x, y] != 0)
+                    if (inputImage1[x, y] != 0 && inputImage2[x, y] != 0)
                     {
-                        temp[x,y] = inputImage1[x,y];
+                        temp[x, y] = inputImage1[x, y];
                     }
                     else
                     {
@@ -1160,7 +1135,7 @@ namespace INFOIBV
             List<int> boundary = new List<int>();
 
 
-            for(int r = 0; r < inputImage.GetLength(1); r++)
+            for (int r = 0; r < inputImage.GetLength(1); r++)
             {
                 bool stop = false;
                 for (int c = 0; c < inputImage.GetLength(0); c++)
@@ -1186,7 +1161,7 @@ namespace INFOIBV
                 if (inputImage[c, r] == 0) continue;
                 if (inputImage[c, r] != 255) throw new Exception("Image is not binary");
                 boundary.Add(dir_to_look);
-                ending_direction= dir_to_look;
+                ending_direction = dir_to_look;
                 coming_direction = ending_direction;
                 direction = (dir_to_look + 6) % 8;
                 pixel = (r, c);
@@ -1213,7 +1188,7 @@ namespace INFOIBV
                     if (inputImage[c, r] == 0) continue;
                     if (inputImage[c, r] != 255) throw new Exception("Image is not binary");
                     boundary.Add(dir_to_look);
-                    direction = ( dir_to_look + 6 ) % 8;
+                    direction = (dir_to_look + 6) % 8;
                     pixel = (r, c);
                     break;
                 }
@@ -1228,17 +1203,18 @@ namespace INFOIBV
         */
         byte[,] floodFill(byte[,] inputImage)
         {
+            if (!isBinary(inputImage)) throw new Exception("Image is not binary");
             byte id = 1;
             byte[,] res = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
-            for(int r = 0; r < inputImage.GetLength(1); r ++)
-                for(int c = 0; c < inputImage.GetLength(0); c++)
+            for (int r = 0; r < inputImage.GetLength(1); r++)
+                for (int c = 0; c < inputImage.GetLength(0); c++)
                 {
-                    if (inputImage[c, r] == 0 || res[c,r] != 0) continue;
-                    Queue<(int, int)> q = new Queue<(int, int)> ();
+                    if (inputImage[c, r] == 0 || res[c, r] != 0) continue;
+                    Queue<(int, int)> q = new Queue<(int, int)>();
                     q.Enqueue((c, r));
                     while (q.Any())
                     {
-                        (int col,  int row) = q.Dequeue();
+                        (int col, int row) = q.Dequeue();
                         if (col < 0 || col >= inputImage.GetLength(0) || row < 0 || row >= inputImage.GetLength(1))
                         {
                             continue;
@@ -1250,15 +1226,15 @@ namespace INFOIBV
                         res[col, row] = id;
                         q.Enqueue((col + 1, row));
                         q.Enqueue((col - 1, row));
-                        q.Enqueue((col, row +1));
-                        q.Enqueue((col, row -1));
+                        q.Enqueue((col, row + 1));
+                        q.Enqueue((col, row - 1));
                     }
                     id++;
                 }
             return res;
         }
 
-        void rec_flood(int c, int r,ref byte[,] inputImage,ref byte[,] res, byte id, ref List<(int, int)> added)
+        void rec_flood(int c, int r, ref byte[,] inputImage, ref byte[,] res, byte id, ref List<(int, int)> added)
         {
             if (c < 0 || c >= inputImage.GetLength(0) || r < 0 || r >= inputImage.GetLength(1))
             {
@@ -1273,21 +1249,29 @@ namespace INFOIBV
             added.Add((c, r));
             int res_value = res[c, r];
             int img_value = inputImage[c, r];
-            rec_flood(c+1,r, ref inputImage,ref res, id, ref added);
-            rec_flood(c-1,r, ref inputImage,ref res, id, ref added);
-            rec_flood(c,r+1, ref inputImage,ref res, id, ref added);
-            rec_flood(c,r-1, ref inputImage,ref res, id, ref added);
+            rec_flood(c + 1, r, ref inputImage, ref res, id, ref added);
+            rec_flood(c - 1, r, ref inputImage, ref res, id, ref added);
+            rec_flood(c, r + 1, ref inputImage, ref res, id, ref added);
+            rec_flood(c, r - 1, ref inputImage, ref res, id, ref added);
         }
 
         // ====================================================================
         // ============= YOUR FUNCTIONS FOR ASSIGNMENT 3 GO HERE ==============
         // ====================================================================
 
-    }
+        bool isBinary(byte[,] inputImage)
+        {
+            for (int c = 0; c < inputImage.GetLength(0); c++)
+                for (int r = 0; r < inputImage.GetLength(1); r++)
+                    if (inputImage[c, r] != 0 && inputImage[c, r] != 255)
+                        return false;
+            return true;
+        }
 
-    internal enum SEShape
-    {
-        Square,
-        Plus
+        internal enum SEShape
+        {
+            Square,
+            Plus
+        }
     }
 }
