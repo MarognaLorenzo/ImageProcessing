@@ -373,12 +373,9 @@ namespace INFOIBV
 
             byte[,] g_scale_image = convertToGrayscale(Image);          // convert image to grayscale
 
-            List<int> values = countValues(g_scale_image);
+            (int ammo, _) = countValues(g_scale_image);
 
-            values.RemoveAll(isZero);
-
-            int F = values.Count;
-            Console.WriteLine("\nSelected image has " + F + " different values.");
+            Console.WriteLine("\nSelected image has " + ammo + " different values.");
 
 
             byte[,] workingImage = g_scale_image;
@@ -1262,23 +1259,31 @@ namespace INFOIBV
         * output:                      int[] histogram of values
         *                              byte amount of distinct values.
         */
-        List<int> countValues(byte[,] inputImage)
+        Tuple<byte, List<int>> countValues(byte[,] inputImage)
         {
-            Dictionary<int, int> hist = new Dictionary<int, int>();
+            List<int> hist = new List<int>();
+            for (int i = 0; i < 256; i++) hist.Add(0);
+
+            byte ammo = 0;
+
+            for (int i = 0; i < 256; i++)
+            {
+                hist[i] = 0;
+            }
+
             for (int x = 0; x < inputImage.GetLength(0); x++)
+            {
                 for (int y = 0; y < inputImage.GetLength(1); y++)
                 {
-                    if (!hist.ContainsKey(inputImage[x, y]))
-                        hist.Add(inputImage[x, y], 0);
+                    if (hist[inputImage[x, y]] == 0)
+                    {
+                        ammo++;
+                    }
                     hist[inputImage[x, y]]++;
                 }
-            List<int> result = new List<int>(hist.Keys.Max() + 1);
-            for (int i = 0; i < hist.Keys.Max() + 1; i++) result.Add(0);
-            foreach (var item in hist)
-            {
-                result[item.Key] = item.Value;
             }
-            return result;
+
+            return new Tuple<byte, List<int>>(ammo, hist);
         }
 
 
@@ -1291,9 +1296,9 @@ namespace INFOIBV
         {
             byte[,] labels = floodFill(inputImage);
 
-            List<int> values = countValues(labels);
-            values[0] = 0;
-            byte counter = (byte)values.IndexOf(values.Max());
+            (byte ammo, List<int> hist)  = countValues(labels);
+            hist[0] = 0;
+            byte counter = (byte) hist.IndexOf(hist.Max());
             byte[,] temp = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
 
 

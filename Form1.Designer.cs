@@ -246,7 +246,7 @@
             // 
             // CountNonBGPixel
             // 
-            this.CountNonBGPixel.Location = new System.Drawing.Point(769, 163);
+            this.CountNonBGPixel.Location = new System.Drawing.Point(909, 133);
             this.CountNonBGPixel.Margin = new System.Windows.Forms.Padding(4);
             this.CountNonBGPixel.Name = "CountNonBGPixel";
             this.CountNonBGPixel.Size = new System.Drawing.Size(132, 27);
