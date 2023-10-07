@@ -1110,6 +1110,15 @@ namespace INFOIBV
             byte[,] temp = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
             List<Tuple<int, int>> cords = new List<Tuple<int, int>>();
             List<byte> tmp;
+
+            //Setup progress bar.
+            progressBar.Visible = true;
+            progressBar.Minimum = 1;
+            progressBar.Maximum = InputImage1.Size.Width * InputImage1.Size.Height;
+            progressBar.Value = 1;
+            progressBar.Step = 1;
+
+            // Collecting the values of the SE
             for (int x = 0; x < SE.GetLength(0); x++)
             {
                 for (int y = 0; y < SE.GetLength(1); y++)
@@ -1121,8 +1130,10 @@ namespace INFOIBV
                 }
             }
 
+            //A check on if the image is binairy and followup on what to do in both cases.
             if (binary)
             {
+                // Eroding the image using a double forloop.
                 if (!isBinary(inputImage)) throw new Exception("Image is not binary");
                 for (int x = 0; x < inputImage.GetLength(0); x++)
                     for (int y = 0; y < inputImage.GetLength(1); y++)
@@ -1144,13 +1155,16 @@ namespace INFOIBV
                                 temp[x, y] = 0;
                                 break;
                             }
+                            
 
                         }
+                        progressBar.PerformStep();
                     }
 
             }
             else
             {
+                // Eroding the image using a double forloop
                 for (int x = 0; x < inputImage.GetLength(0); x++)
                 {
                     for (int y = 0; y < inputImage.GetLength(1); y++)
@@ -1170,11 +1184,15 @@ namespace INFOIBV
                             {
                                 tmp.Add(inputImage[x + cords[z].Item1, y + cords[z].Item2]);
                             }
+                            
                         }
                         temp[x, y] = tmp.AsQueryable().Min();
+                        progressBar.PerformStep();
                     }
                 }
             }
+
+            progressBar.Visible = false;
 
             return temp;
         }
@@ -1192,6 +1210,15 @@ namespace INFOIBV
             byte[,] temp = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
             List<Tuple<int, int>> cords = new List<Tuple<int, int>>();
             List<byte> tmp;
+
+            //Setup progress bar.
+            progressBar.Visible = true;
+            progressBar.Minimum = 1;
+            progressBar.Maximum = InputImage1.Size.Width * InputImage1.Size.Height;
+            progressBar.Value = 1;
+            progressBar.Step = 1;
+
+            //gathering the values of the SE.
             for (int x = 0; x < SE.GetLength(0); x++)
             {
                 for (int y = 0; y < SE.GetLength(1); y++)
@@ -1203,8 +1230,10 @@ namespace INFOIBV
                 }
             }
 
+            //check if the image is bainary and the code for either case
             if (binary)
             {
+                //double forlood to dialate the image
                 if (!isBinary(inputImage)) throw new Exception("Image is not binary");
                 for (int x = 0; x < inputImage.GetLength(0); x++)
                     for (int y = 0; y < inputImage.GetLength(1); y++)
@@ -1219,11 +1248,14 @@ namespace INFOIBV
                                 continue;
                             }
                             else temp[x + cords[z].Item1, y + cords[z].Item2] = 255;
+                            
                         }
+                        progressBar.PerformStep();
                     }
             }
             else
             {
+                // double forloop to dialte the image
                 for (int x = 0; x < inputImage.GetLength(0); x++)
                 {
                     for (int y = 0; y < inputImage.GetLength(1); y++)
@@ -1243,11 +1275,15 @@ namespace INFOIBV
                             {
                                 tmp.Add(inputImage[x + cords[z].Item1, y + cords[z].Item2]);
                             }
+
                         }
+                        progressBar.PerformStep();
                         temp[x, y] = tmp.AsQueryable().Max();
                     }
                 }
             }
+
+            progressBar.Visible = false;
 
             return temp;
         }
@@ -1261,48 +1297,70 @@ namespace INFOIBV
         */
         Tuple<byte, List<int>> countValues(byte[,] inputImage)
         {
+            //innitialising the values.
             List<int> hist = new List<int>();
             for (int i = 0; i < 256; i++) hist.Add(0);
 
-            byte ammo = 0;
+            //Setup progress bar.
+            progressBar.Visible = true;
+            progressBar.Minimum = 1;
+            progressBar.Maximum = InputImage1.Size.Width * InputImage1.Size.Height;
+            progressBar.Value = 1;
+            progressBar.Step = 1;
 
+            byte ammo = 0;
+            // making all values in hist 0 so later it can be a simle addition method.
             for (int i = 0; i < 256; i++)
             {
                 hist[i] = 0;
             }
 
+            //going over every pixel and seeing it's value
             for (int x = 0; x < inputImage.GetLength(0); x++)
             {
                 for (int y = 0; y < inputImage.GetLength(1); y++)
                 {
-                    if (hist[inputImage[x, y]] == 0)
+                    if (hist[inputImage[x, y]] == 0) //if statement ot check if the value is anew distinct value.
                     {
                         ammo++;
                     }
                     hist[inputImage[x, y]]++;
+                    progressBar.PerformStep();
                 }
             }
+
+            progressBar.Visible = false;
 
             return new Tuple<byte, List<int>>(ammo, hist);
         }
 
 
         /*
-        * largest: takes an input bit image and return an image with only the largest item using 4 neighbor method
+        * largest: takes an input bit image and return an image with only the largest item
         * input:   inputImage          single channel image
         * output:                      single channel image
         */
         byte[,] largest(byte[,] inputImage)
         {
+            //first a floodfil to mark each diistinct item.
             byte[,] labels = floodFill(inputImage);
 
+            //Setup progress bar.
+            progressBar.Visible = true;
+            progressBar.Minimum = 1;
+            progressBar.Maximum = InputImage1.Size.Width * InputImage1.Size.Height;
+            progressBar.Value = 1;
+            progressBar.Step = 1;
+
+            //using countvalues and then making the array not have any logged for value 0 so the most common value, or the value 
+            //of the largest object can be found and logged.
             (byte ammo, List<int> hist)  = countValues(labels);
             hist[0] = 0;
             byte counter = (byte) hist.IndexOf(hist.Max());
             byte[,] temp = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
 
 
-
+            //double forloop that return a binairy image only showing the area with the value previously logged.
             for (int x = 0; x < inputImage.GetLength(0); x++)
             {
                 for (int y = 0; y < inputImage.GetLength(1); y++)
@@ -1315,42 +1373,12 @@ namespace INFOIBV
                     {
                         temp[x, y] = 0;
                     }
+                    progressBar.PerformStep();
                 }
             }
 
-            return temp;
-        }
+            progressBar.Visible = false;
 
-        byte[,] recolor(byte[,] inputImage, int x, int y, byte c)
-        {
-            byte[,] temp = inputImage;
-            temp[x, y] = c;
-            if (x == 0)
-            {
-                if (temp[x + 1, y] == 255) { temp = recolor(temp, x + 1, y, c); }
-            }
-            else if (x == inputImage.GetLength(0) - 1)
-            {
-                if (temp[x - 1, y] == 255) { temp = recolor(temp, x - 1, y, c); }
-            }
-            else
-            {
-                if (temp[x + 1, y] == 255) { temp = recolor(temp, x + 1, y, c); }
-                if (temp[x - 1, y] == 255) { temp = recolor(temp, x - 1, y, c); }
-            }
-            if (y == 0)
-            {
-                if (temp[x, y + 1] == 255) { temp = recolor(temp, x, y + 1, c); }
-            }
-            else if (y == inputImage.GetLength(1) - 1)
-            {
-                if (temp[x, y - 1] == 255) { temp = recolor(temp, x, y - 1, c); }
-            }
-            else
-            {
-                if (temp[x, y + 1] == 255) { temp = recolor(temp, x, y + 1, c); }
-                if (temp[x, y - 1] == 255) { temp = recolor(temp, x, y - 1, c); }
-            }
             return temp;
         }
 
@@ -1366,9 +1394,16 @@ namespace INFOIBV
             if (!isBinary(inputImage1)) throw new Exception("Image1 is not binary");
             if (!isBinary(inputImage2)) throw new Exception("Image2 is not binary");
 
+            //Setup progress bar.
+            progressBar.Visible = true;
+            progressBar.Minimum = 1;
+            progressBar.Maximum = InputImage1.Size.Width * InputImage1.Size.Height;
+            progressBar.Value = 1;
+            progressBar.Step = 1;
 
             byte[,] temp = new byte[inputImage1.GetLength(0), inputImage1.GetLength(1)];
 
+            // double forloop that generated a new image where only the values that are non 0 in both images get shown.
             for (int x = 0; x < inputImage1.GetLength(0); x++)
                 for (int y = 0; y < inputImage1.GetLength(1); y++)
                 {
@@ -1382,7 +1417,10 @@ namespace INFOIBV
                     {
                         temp[x, y] = 0;
                     }
+                    progressBar.PerformStep();
                 }
+
+            progressBar.Visible = false;
 
             return temp;
         }
@@ -1396,8 +1434,19 @@ namespace INFOIBV
         */
         byte[,] orImages(byte[,] inputImage1, byte[,] inputImage2)
         {
+            if (!isBinary(inputImage1)) throw new Exception("Image1 is not binary");
+            if (!isBinary(inputImage2)) throw new Exception("Image2 is not binary");
+
+            //Setup progress bar.
+            progressBar.Visible = true;
+            progressBar.Minimum = 1;
+            progressBar.Maximum = InputImage1.Size.Width * InputImage1.Size.Height;
+            progressBar.Value = 1;
+            progressBar.Step = 1;
+
             byte[,] temp = new byte[inputImage1.GetLength(0), inputImage1.GetLength(1)];
 
+            //double forloop that generates the new image, only showing he pixels that are non 0 in either of the images
             for (int x = 0; x < inputImage1.GetLength(0); x++)
             {
                 for (int y = 0; y < inputImage1.GetLength(1); y++)
@@ -1410,8 +1459,12 @@ namespace INFOIBV
                     {
                         temp[x, y] = 0;
                     }
+                    progressBar.PerformStep();
                 }
+
             }
+
+            progressBar.Visible = false;
 
             return temp;
         }
