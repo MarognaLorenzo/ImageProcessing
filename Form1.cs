@@ -65,7 +65,7 @@ namespace INFOIBV
                     InputImage1.Size.Height > 512 || InputImage1.Size.Width > 512) // dimension check (may be removed or altered)
                     MessageBox.Show("Error in image dimensions (have to be > 0 and <= 512)");
                 else
-                    pictureBoxIn1.Image = (Image)InputImage1;                 // display input image
+                    pictureBox1.Image = (Image)InputImage1;                 // display input image
             }
         }
         private void loadImageButton2_Click(object sender, EventArgs e)
@@ -73,14 +73,14 @@ namespace INFOIBV
             if (openImageDialog.ShowDialog() == DialogResult.OK)             // open file dialog
             {
                 string file = openImageDialog.FileName;                     // get the file name
-                image2FileName.Text = file;                                  // show file name
+                imageFileName.Text = file;                                  // show file name
                 if (InputImage2 != null) InputImage2.Dispose();               // reset image
                 InputImage2 = new Bitmap(file);                              // create new Bitmap from file
                 if (InputImage2.Size.Height <= 0 || InputImage2.Size.Width <= 0 ||
                     InputImage2.Size.Height > 512 || InputImage2.Size.Width > 512) // dimension check (may be removed or altered)
                     MessageBox.Show("Error in image dimensions (have to be > 0 and <= 512)");
                 else
-                    pictureBoxIn2.Image = (Image)InputImage2;                 // display input image
+                    pictureBox2.Image = (Image)InputImage2;                 // display input image
             }
         }
 
@@ -120,7 +120,7 @@ namespace INFOIBV
                     OutputImage.SetPixel(x, y, newColor);                  // set the pixel color at coordinate (x,y)
                 }
 
-            pictureBoxOut.Image = (Image)OutputImage;                         // display output image
+            pictureBox2.Image = (Image)OutputImage;                         // display output image
         }
 
         private void ClickDilateButton(object sender, EventArgs e)
@@ -155,7 +155,7 @@ namespace INFOIBV
                     OutputImage.SetPixel(x, y, newColor);                  // set the pixel color at coordinate (x,y)
                 }
 
-            pictureBoxOut.Image = (Image)OutputImage;                         // display output image
+            pictureBox2.Image = (Image)OutputImage;                         // display output image
         }
 
         private void ClickErodeButton(object sender, EventArgs e)
@@ -190,7 +190,7 @@ namespace INFOIBV
                     OutputImage.SetPixel(x, y, newColor);                  // set the pixel color at coordinate (x,y)
                 }
 
-            pictureBoxOut.Image = (Image)OutputImage;                         // display output image
+            pictureBox2.Image = (Image)OutputImage;                         // display output image
         }
 
         private void image_c_ButtonClick(object sender, EventArgs e)
@@ -237,7 +237,7 @@ namespace INFOIBV
                     OutputImage.SetPixel(x, y, newColor);                  // set the pixel color at coordinate (x,y)
                 }
 
-            pictureBoxOut.Image = (Image)OutputImage;                         // display output image
+            pictureBox2.Image = (Image)OutputImage;                         // display output image
         }
 
         private void ClickFloodFillButton(object sender, EventArgs e)
@@ -274,7 +274,7 @@ namespace INFOIBV
                     OutputImage.SetPixel(x, y, newColor);                  // set the pixel color at coordinate (x,y)
                 }
 
-            pictureBoxOut.Image = (Image)OutputImage;                         // display output image
+            pictureBox2.Image = (Image)OutputImage;                         // display output image
         }
 
         private void ClickLargestButton(object sender, EventArgs e)
@@ -309,12 +309,55 @@ namespace INFOIBV
                     OutputImage.SetPixel(x, y, newColor);                  // set the pixel color at coordinate (x,y)
                 }
 
-            pictureBoxOut.Image = (Image)OutputImage;                         // display output image
+            pictureBox2.Image = (Image)OutputImage;                         // display output image
         }
 
         private void button3_Click(object sender, EventArgs e)
         {
+            if (InputImage1 == null) return;                                 // get out if no input image
+            if (OutputImage != null) OutputImage.Dispose();                 // reset output image
+            OutputImage = new Bitmap(InputImage1.Size.Width, InputImage1.Size.Height); // create new output image
+            Color[,] Image = new Color[InputImage1.Size.Width, InputImage1.Size.Height]; // create array to speed-up operations (Bitmap functions are very slow)
 
+            // copy input Bitmap to array            
+            for (int x = 0; x < InputImage1.Size.Width; x++)                 // loop over columns
+                for (int y = 0; y < InputImage1.Size.Height; y++)            // loop over rows
+                    Image[x, y] = InputImage1.GetPixel(x, y);                // set pixel color in array at (x,y)
+            
+            
+            if (InputImage2 == null) return;                                 // get out if no input image
+            if (OutputImage != null) OutputImage.Dispose();                 // reset output image
+            OutputImage = new Bitmap(InputImage2.Size.Width, InputImage2.Size.Height); // create new output image
+            Color[,] Image2 = new Color[InputImage2.Size.Width, InputImage2.Size.Height]; // create array to speed-up operations (Bitmap functions are very slow)
+
+            // copy input Bitmap to array            
+            for (int x = 0; x < InputImage2.Size.Width; x++)                 // loop over columns
+                for (int y = 0; y < InputImage2.Size.Height; y++)            // loop over rows
+                    Image2[x, y] = InputImage2.GetPixel(x, y);                // set pixel color in array at (x,y)
+
+
+            byte[,] g_scale_image = convertToGrayscale(Image);          // convert image to grayscale
+
+            byte[,] g_scale_image2 = convertToGrayscale(Image2);          // convert image to grayscale
+
+            byte[,] invert = invertImage(g_scale_image2);
+
+            byte[,] workingImage = andImages(g_scale_image, invert);
+
+            // ==================== END OF YOUR FUNCTION CALLS ====================
+            // ====================================================================
+
+            // copy array to output Bitmap
+            for (
+
+                int x = 0; x < workingImage.GetLength(0); x++)             // loop over columns
+                for (int y = 0; y < workingImage.GetLength(1); y++)         // loop over rows
+                {
+                    Color newColor = Color.FromArgb(workingImage[x, y], workingImage[x, y], workingImage[x, y]);
+                    OutputImage.SetPixel(x, y, newColor);                  // set the pixel color at coordinate (x,y)
+                }
+
+            pictureBox2.Image = (Image)OutputImage;                         // display output image
         }
 
 
@@ -1150,40 +1193,6 @@ namespace INFOIBV
             return temp;
         }
 
-        byte[,] recolor(byte[,] inputImage, int x, int y, byte c)
-        {
-            byte[,] temp = inputImage;
-            temp[x, y] = c;
-            if(x == 0)
-            {
-                if (temp[x + 1, y] == 255) { temp = recolor(temp, x + 1, y, c); }
-            }
-            else if (x == inputImage.GetLength(0) - 1)
-            {
-                if (temp[x - 1, y] == 255) { temp = recolor(temp, x - 1, y, c); }
-            }
-            else
-            {
-                if (temp[x + 1, y] == 255) { temp = recolor(temp, x + 1, y, c); }
-                if (temp[x - 1, y] == 255) { temp = recolor(temp, x - 1, y, c); }
-            }
-            if (y == 0)
-            {
-                if (temp[x, y + 1] == 255) { temp = recolor(temp, x, y + 1, c); }
-            }
-            else if (y == inputImage.GetLength(1) - 1)
-            {
-                if (temp[x, y - 1] == 255) { temp = recolor(temp, x, y - 1, c); }
-            }
-            else
-            {
-                if (temp[x, y + 1] == 255) { temp = recolor(temp, x, y + 1, c); }
-                if (temp[x, y - 1] == 255) { temp = recolor(temp, x, y - 1, c); }
-            }
-            return temp;
-        }
-
-
         /*
         * andImages: takes 2 input byte images and does a pointwise and funtion on each
         * input:   inputImage1         single channel bit image
@@ -1405,5 +1414,7 @@ namespace INFOIBV
             Square,
             Plus
         }
+
+
     }
 }
