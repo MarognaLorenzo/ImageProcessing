@@ -309,7 +309,6 @@
         private System.Windows.Forms.Button ErodeButton;
         private System.Windows.Forms.Button DilateButton;
         private System.Windows.Forms.TextBox image2FileName;
-        private System.Windows.Forms.PictureBox pictureBox1;
         private System.Windows.Forms.Button PipelineEbutton;
         private System.Windows.Forms.Button CountValuesButton;
         private System.Windows.Forms.Button CountNonBGPixel;
