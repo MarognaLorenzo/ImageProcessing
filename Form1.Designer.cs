@@ -33,7 +33,6 @@
             this.imageFileName = new System.Windows.Forms.TextBox();
             this.pictureBoxIn1 = new System.Windows.Forms.PictureBox();
             this.pictureBoxIn2 = new System.Windows.Forms.PictureBox();
-            this.PipelineWButton = new System.Windows.Forms.Button();
             this.saveImageDialog = new System.Windows.Forms.SaveFileDialog();
             this.saveButton = new System.Windows.Forms.Button();
             this.pictureBoxOut = new System.Windows.Forms.PictureBox();
@@ -100,17 +99,6 @@
             this.pictureBoxIn2.TabIndex = 14;
             this.pictureBoxIn2.TabStop = false;
             // 
-            // PipelineWButton
-            // 
-            this.PipelineWButton.Location = new System.Drawing.Point(629, -2);
-            this.PipelineWButton.Margin = new System.Windows.Forms.Padding(4);
-            this.PipelineWButton.Name = "PipelineWButton";
-            this.PipelineWButton.Size = new System.Drawing.Size(132, 27);
-            this.PipelineWButton.TabIndex = 3;
-            this.PipelineWButton.Text = "PipelineW";
-            this.PipelineWButton.UseVisualStyleBackColor = true;
-            this.PipelineWButton.Click += new System.EventHandler(this.ClickPipilineW);
-            // 
             // saveImageDialog
             // 
             this.saveImageDialog.Filter = "Bitmap file (*.bmp)|*.bmp";
@@ -154,24 +142,24 @@
             this.PipelineZbutton.Name = "PipelineZbutton";
             this.PipelineZbutton.Size = new System.Drawing.Size(132, 27);
             this.PipelineZbutton.TabIndex = 7;
-            this.PipelineZbutton.Text = "PipelineZ";
+            this.PipelineZbutton.Text = "And";
             this.PipelineZbutton.UseVisualStyleBackColor = true;
-            this.PipelineZbutton.Click += new System.EventHandler(this.ClickPipelineZ);
+            this.PipelineZbutton.Click += new System.EventHandler(this.ClickAnd);
             // 
             // DetectAreasButton
             // 
-            this.DetectAreasButton.Location = new System.Drawing.Point(629, 132);
+            this.DetectAreasButton.Location = new System.Drawing.Point(629, 163);
             this.DetectAreasButton.Margin = new System.Windows.Forms.Padding(4);
             this.DetectAreasButton.Name = "DetectAreasButton";
             this.DetectAreasButton.Size = new System.Drawing.Size(132, 27);
             this.DetectAreasButton.TabIndex = 8;
-            this.DetectAreasButton.Text = "Detect Areas (Flood Fill)";
+            this.DetectAreasButton.Text = "Floodfill";
             this.DetectAreasButton.UseVisualStyleBackColor = true;
             this.DetectAreasButton.Click += new System.EventHandler(this.ClickFloodFillButton);
             // 
             // LargestObjectbutton
             // 
-            this.LargestObjectbutton.Location = new System.Drawing.Point(629, 166);
+            this.LargestObjectbutton.Location = new System.Drawing.Point(769, 163);
             this.LargestObjectbutton.Margin = new System.Windows.Forms.Padding(4);
             this.LargestObjectbutton.Name = "LargestObjectbutton";
             this.LargestObjectbutton.Size = new System.Drawing.Size(132, 27);
@@ -229,42 +217,42 @@
             this.PipelineEbutton.Name = "PipelineEbutton";
             this.PipelineEbutton.Size = new System.Drawing.Size(132, 27);
             this.PipelineEbutton.TabIndex = 15;
-            this.PipelineEbutton.Text = "PipelineE";
+            this.PipelineEbutton.Text = "Or";
             this.PipelineEbutton.UseVisualStyleBackColor = true;
-            this.PipelineEbutton.Click += new System.EventHandler(this.ClickPipilineE);
+            this.PipelineEbutton.Click += new System.EventHandler(this.ClickOr);
             // 
             // CountValuesButton
             // 
-            this.CountValuesButton.Location = new System.Drawing.Point(769, 132);
+            this.CountValuesButton.Location = new System.Drawing.Point(909, 163);
             this.CountValuesButton.Margin = new System.Windows.Forms.Padding(4);
             this.CountValuesButton.Name = "CountValuesButton";
             this.CountValuesButton.Size = new System.Drawing.Size(132, 27);
             this.CountValuesButton.TabIndex = 16;
-            this.CountValuesButton.Text = "Count Different Values";
+            this.CountValuesButton.Text = "Count Values";
             this.CountValuesButton.UseVisualStyleBackColor = true;
             this.CountValuesButton.Click += new System.EventHandler(this.ClickCountValues);
             // 
             // CountNonBGPixel
             // 
-            this.CountNonBGPixel.Location = new System.Drawing.Point(909, 133);
+            this.CountNonBGPixel.Location = new System.Drawing.Point(770, 128);
             this.CountNonBGPixel.Margin = new System.Windows.Forms.Padding(4);
             this.CountNonBGPixel.Name = "CountNonBGPixel";
             this.CountNonBGPixel.Size = new System.Drawing.Size(132, 27);
             this.CountNonBGPixel.TabIndex = 17;
-            this.CountNonBGPixel.Text = "Count non BG pixels";
+            this.CountNonBGPixel.Text = "Opening";
             this.CountNonBGPixel.UseVisualStyleBackColor = true;
-            this.CountNonBGPixel.Click += new System.EventHandler(this.ClickCountNonBGPixel);
+            this.CountNonBGPixel.Click += new System.EventHandler(this.ClickOpen);
             // 
             // PipelineGButton
             // 
-            this.PipelineGButton.Location = new System.Drawing.Point(909, 98);
+            this.PipelineGButton.Location = new System.Drawing.Point(630, 128);
             this.PipelineGButton.Margin = new System.Windows.Forms.Padding(4);
             this.PipelineGButton.Name = "PipelineGButton";
             this.PipelineGButton.Size = new System.Drawing.Size(132, 27);
             this.PipelineGButton.TabIndex = 18;
-            this.PipelineGButton.Text = "PipelineG";
+            this.PipelineGButton.Text = "Closing";
             this.PipelineGButton.UseVisualStyleBackColor = true;
-            this.PipelineGButton.Click += new System.EventHandler(this.ClickPipelineG);
+            this.PipelineGButton.Click += new System.EventHandler(this.ClickClose);
             // 
             // INFOIBV
             // 
@@ -286,7 +274,6 @@
             this.Controls.Add(this.progressBar);
             this.Controls.Add(this.pictureBoxOut);
             this.Controls.Add(this.saveButton);
-            this.Controls.Add(this.PipelineWButton);
             this.Controls.Add(this.pictureBoxIn1);
             this.Controls.Add(this.pictureBoxIn2);
             this.Controls.Add(this.imageFileName);
@@ -312,7 +299,6 @@
         private System.Windows.Forms.TextBox imageFileName;
         private System.Windows.Forms.PictureBox pictureBoxIn1;
         private System.Windows.Forms.PictureBox pictureBoxIn2;
-        private System.Windows.Forms.Button PipelineWButton;
         private System.Windows.Forms.SaveFileDialog saveImageDialog;
         private System.Windows.Forms.Button saveButton;
         private System.Windows.Forms.PictureBox pictureBoxOut;

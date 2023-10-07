@@ -126,27 +126,35 @@ namespace INFOIBV
         /*
  * applyButton_Click: process when user clicks "image_b" button
  */
-        private void ClickPipilineE(object sender, EventArgs e)
+        private void ClickOr(object sender, EventArgs e)
         {
-            if (InputImage1 == null) return;                                 // get out if no input image
+            if (InputImage1 == null || InputImage2 == null) return; // get out if no input image
+            if (InputImage1.Width != InputImage2.Width || InputImage1.Height != InputImage2.Height) throw new Exception("Images not compatible");
             if (OutputImage != null) OutputImage.Dispose();                 // reset output image
             OutputImage = new Bitmap(InputImage1.Size.Width, InputImage1.Size.Height); // create new output image
-            Color[,] Image = new Color[InputImage1.Size.Width, InputImage1.Size.Height]; // create array to speed-up operations (Bitmap functions are very slow)
+            Color[,] Image1 = new Color[InputImage1.Size.Width, InputImage1.Size.Height]; // create array to speed-up operations (Bitmap functions are very slow)
+            Color[,] Image2 = new Color[InputImage1.Size.Width, InputImage1.Size.Height]; // create array to speed-up operations (Bitmap functions are very slow)
 
             // copy input Bitmap to array            
             for (int x = 0; x < InputImage1.Size.Width; x++)                 // loop over columns
-                for (int y = 0; y < InputImage1.Size.Height; y++)            // loop over rows
-                    Image[x, y] = InputImage1.GetPixel(x, y);                // set pixel color in array at (x,y)
+                for (int y = 0; y < InputImage1.Size.Height; y++)
+                {
+                    Image1[x, y] = InputImage1.GetPixel(x, y);                // set pixel color in array at (x,y)
+                    Image2[x, y] = InputImage2.GetPixel(x, y);                // set pixel color in array at (x,y)
+                }// loop over rows
+
+            // ====================================================================
+            // =================== YOUR FUNCTION CALLS GO HERE ====================
+            // Alternatively you can create buttons to invoke certain functionality
+            // ====================================================================
 
 
-            byte[,] g_scale_image = convertToGrayscale(Image);          // convert image to grayscale
+            byte[,] img1 = convertToGrayscale(Image1);          // convert image to grayscale
+            byte[,] img2 = convertToGrayscale(Image2);          // convert image to grayscale
 
-            byte[,] SE1 = createStructuringElement(11, SEShape.Plus);
-            byte[,] dilate1 = dilateImage(g_scale_image, SE1, isBinary(g_scale_image));
+            if (!isBinary(img1) || !isBinary(img2)) throw new Exception("Images are not binary");
 
-            byte[,] workingImage = dilate1;
-
-
+            byte[,] workingImage = orImages(img1, img2);
 
             // ==================== END OF YOUR FUNCTION CALLS ====================
             // ====================================================================
@@ -161,7 +169,7 @@ namespace INFOIBV
                     OutputImage.SetPixel(x, y, newColor);                  // set the pixel color at coordinate (x,y)
                 }
 
-            pictureBoxOut.Image = (Image)OutputImage;                         // display output image
+            pictureBoxOut.Image = (Image)OutputImage;                         // display output image                         // display output image
         }
 
         private void ClickDilateButton(object sender, EventArgs e)
@@ -234,7 +242,7 @@ namespace INFOIBV
             pictureBoxOut.Image = (Image)OutputImage;                         // display output image
         }
 
-        private void ClickPipelineZ(object sender, EventArgs e)
+        private void ClickAnd(object sender, EventArgs e)
         {
             if (InputImage1 == null || InputImage2 == null) return; // get out if no input image
             if (InputImage1.Width != InputImage2.Width || InputImage1.Height != InputImage2.Height) throw new Exception("Images not compatible");
@@ -262,9 +270,7 @@ namespace INFOIBV
 
             if (!isBinary(img1) || !isBinary(img2)) throw new Exception("Images are not binary");
 
-            byte[,] compl2 = invertImage(img2);
-
-            byte[,] workingImage = andImages(img1, compl2);
+            byte[,] workingImage = andImages(img1, img2);
 
             // ==================== END OF YOUR FUNCTION CALLS ====================
             // ====================================================================
@@ -396,7 +402,7 @@ namespace INFOIBV
             pictureBoxOut.Image = (Image)OutputImage;                         // display output image
         }
 
-        private void ClickCountNonBGPixel(object sender, EventArgs e)
+        private void ClickOpen(object sender, EventArgs e)
         {
             if (InputImage1 == null) return;                                 // get out if no input image
             if (OutputImage != null) OutputImage.Dispose();                 // reset output image
@@ -411,18 +417,13 @@ namespace INFOIBV
 
             byte[,] g_scale_image = convertToGrayscale(Image);          // convert image to grayscale
 
-            if (!isBinary(g_scale_image)) throw new Exception("Image is not binary - Background not clear");
+            byte[,] thresholded = thresholdImage(g_scale_image, 127);
+            byte[,] SE1 = createStructuringElement(3, SEShape.Plus);
+            byte[,] close = openImage(thresholded, SE1, isBinary(thresholded));
 
-            int cont = 0;
-            for (int c = 0; c < g_scale_image.GetLength(0); c++)
-                for (int r = 0; r < g_scale_image.GetLength(1); r++)
-                    if (g_scale_image[c, r] == 0) cont++;
-
-
-            Console.WriteLine("\nSelected image has " + cont + " pixels as a background.");
+            byte[,] workingImage = close;
 
 
-            byte[,] workingImage = g_scale_image;
 
             // ==================== END OF YOUR FUNCTION CALLS ====================
             // ====================================================================
@@ -440,7 +441,7 @@ namespace INFOIBV
             pictureBoxOut.Image = (Image)OutputImage;                         // display output image
         }
 
-        private void ClickPipelineG(object sender, EventArgs e)
+        private void ClickClose(object sender, EventArgs e)
         {
             if (InputImage1 == null) return;                                 // get out if no input image
             if (OutputImage != null) OutputImage.Dispose();                 // reset output image
