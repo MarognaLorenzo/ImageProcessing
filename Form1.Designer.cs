@@ -33,18 +33,22 @@
             this.imageFileName = new System.Windows.Forms.TextBox();
             this.pictureBoxIn1 = new System.Windows.Forms.PictureBox();
             this.pictureBoxIn2 = new System.Windows.Forms.PictureBox();
-            this.applyButton = new System.Windows.Forms.Button();
+            this.PipelineWButton = new System.Windows.Forms.Button();
             this.saveImageDialog = new System.Windows.Forms.SaveFileDialog();
             this.saveButton = new System.Windows.Forms.Button();
             this.pictureBoxOut = new System.Windows.Forms.PictureBox();
             this.progressBar = new System.Windows.Forms.ProgressBar();
-            this.ApplyButton2 = new System.Windows.Forms.Button();
-            this.button1 = new System.Windows.Forms.Button();
-            this.button2 = new System.Windows.Forms.Button();
-            this.button3 = new System.Windows.Forms.Button();
+            this.PipelineZbutton = new System.Windows.Forms.Button();
+            this.DetectAreasButton = new System.Windows.Forms.Button();
+            this.LargestObjectbutton = new System.Windows.Forms.Button();
+            this.ErodeButton = new System.Windows.Forms.Button();
             this.DilateButton = new System.Windows.Forms.Button();
             this.LoadImage2Button = new System.Windows.Forms.Button();
             this.image2FileName = new System.Windows.Forms.TextBox();
+            this.PipelineEbutton = new System.Windows.Forms.Button();
+            this.CountValuesButton = new System.Windows.Forms.Button();
+            this.CountNonBGPixel = new System.Windows.Forms.Button();
+            this.PipelineGButton = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBoxIn1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBoxIn2)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBoxOut)).BeginInit();
@@ -96,16 +100,16 @@
             this.pictureBoxIn2.TabIndex = 14;
             this.pictureBoxIn2.TabStop = false;
             // 
-            // applyButton
+            // PipelineWButton
             // 
-            this.applyButton.Location = new System.Drawing.Point(629, -2);
-            this.applyButton.Margin = new System.Windows.Forms.Padding(4);
-            this.applyButton.Name = "applyButton";
-            this.applyButton.Size = new System.Drawing.Size(132, 27);
-            this.applyButton.TabIndex = 3;
-            this.applyButton.Text = "PipelineW";
-            this.applyButton.UseVisualStyleBackColor = true;
-            this.applyButton.Click += new System.EventHandler(this.ClickPipilineW);
+            this.PipelineWButton.Location = new System.Drawing.Point(629, -2);
+            this.PipelineWButton.Margin = new System.Windows.Forms.Padding(4);
+            this.PipelineWButton.Name = "PipelineWButton";
+            this.PipelineWButton.Size = new System.Drawing.Size(132, 27);
+            this.PipelineWButton.TabIndex = 3;
+            this.PipelineWButton.Text = "PipelineW";
+            this.PipelineWButton.UseVisualStyleBackColor = true;
+            this.PipelineWButton.Click += new System.EventHandler(this.ClickPipilineW);
             // 
             // saveImageDialog
             // 
@@ -143,49 +147,49 @@
             this.progressBar.TabIndex = 6;
             this.progressBar.Visible = false;
             // 
-            // ApplyButton2
+            // PipelineZbutton
             // 
-            this.ApplyButton2.Location = new System.Drawing.Point(629, 98);
-            this.ApplyButton2.Margin = new System.Windows.Forms.Padding(4);
-            this.ApplyButton2.Name = "ApplyButton2";
-            this.ApplyButton2.Size = new System.Drawing.Size(132, 27);
-            this.ApplyButton2.TabIndex = 7;
-            this.ApplyButton2.Text = "PipelineZ";
-            this.ApplyButton2.UseVisualStyleBackColor = true;
-            this.ApplyButton2.Click += new System.EventHandler(this.ClickPipelineZ);
+            this.PipelineZbutton.Location = new System.Drawing.Point(629, 98);
+            this.PipelineZbutton.Margin = new System.Windows.Forms.Padding(4);
+            this.PipelineZbutton.Name = "PipelineZbutton";
+            this.PipelineZbutton.Size = new System.Drawing.Size(132, 27);
+            this.PipelineZbutton.TabIndex = 7;
+            this.PipelineZbutton.Text = "PipelineZ";
+            this.PipelineZbutton.UseVisualStyleBackColor = true;
+            this.PipelineZbutton.Click += new System.EventHandler(this.ClickPipelineZ);
             // 
-            // button1
+            // DetectAreasButton
             // 
-            this.button1.Location = new System.Drawing.Point(629, 132);
-            this.button1.Margin = new System.Windows.Forms.Padding(4);
-            this.button1.Name = "button1";
-            this.button1.Size = new System.Drawing.Size(132, 27);
-            this.button1.TabIndex = 8;
-            this.button1.Text = "Detect Areas (Flood Fill)";
-            this.button1.UseVisualStyleBackColor = true;
-            this.button1.Click += new System.EventHandler(this.ClickFloodFillButton);
+            this.DetectAreasButton.Location = new System.Drawing.Point(629, 132);
+            this.DetectAreasButton.Margin = new System.Windows.Forms.Padding(4);
+            this.DetectAreasButton.Name = "DetectAreasButton";
+            this.DetectAreasButton.Size = new System.Drawing.Size(132, 27);
+            this.DetectAreasButton.TabIndex = 8;
+            this.DetectAreasButton.Text = "Detect Areas (Flood Fill)";
+            this.DetectAreasButton.UseVisualStyleBackColor = true;
+            this.DetectAreasButton.Click += new System.EventHandler(this.ClickFloodFillButton);
             // 
-            // button2
+            // LargestObjectbutton
             // 
-            this.button2.Location = new System.Drawing.Point(629, 166);
-            this.button2.Margin = new System.Windows.Forms.Padding(4);
-            this.button2.Name = "button2";
-            this.button2.Size = new System.Drawing.Size(132, 27);
-            this.button2.TabIndex = 9;
-            this.button2.Text = "Largest object";
-            this.button2.UseVisualStyleBackColor = true;
-            this.button2.Click += new System.EventHandler(this.ClickLargestButton);
+            this.LargestObjectbutton.Location = new System.Drawing.Point(629, 166);
+            this.LargestObjectbutton.Margin = new System.Windows.Forms.Padding(4);
+            this.LargestObjectbutton.Name = "LargestObjectbutton";
+            this.LargestObjectbutton.Size = new System.Drawing.Size(132, 27);
+            this.LargestObjectbutton.TabIndex = 9;
+            this.LargestObjectbutton.Text = "Largest object";
+            this.LargestObjectbutton.UseVisualStyleBackColor = true;
+            this.LargestObjectbutton.Click += new System.EventHandler(this.ClickLargestButton);
             // 
-            // button3
+            // ErodeButton
             // 
-            this.button3.Location = new System.Drawing.Point(630, 63);
-            this.button3.Margin = new System.Windows.Forms.Padding(4);
-            this.button3.Name = "button3";
-            this.button3.Size = new System.Drawing.Size(132, 27);
-            this.button3.TabIndex = 10;
-            this.button3.Text = "Erode";
-            this.button3.UseVisualStyleBackColor = true;
-            this.button3.Click += new System.EventHandler(this.ClickErodeButton);
+            this.ErodeButton.Location = new System.Drawing.Point(630, 63);
+            this.ErodeButton.Margin = new System.Windows.Forms.Padding(4);
+            this.ErodeButton.Name = "ErodeButton";
+            this.ErodeButton.Size = new System.Drawing.Size(132, 27);
+            this.ErodeButton.TabIndex = 10;
+            this.ErodeButton.Text = "Erode";
+            this.ErodeButton.UseVisualStyleBackColor = true;
+            this.ErodeButton.Click += new System.EventHandler(this.ClickErodeButton);
             // 
             // DilateButton
             // 
@@ -218,23 +222,71 @@
             this.image2FileName.Size = new System.Drawing.Size(420, 22);
             this.image2FileName.TabIndex = 13;
             // 
+            // PipelineEbutton
+            // 
+            this.PipelineEbutton.Location = new System.Drawing.Point(769, 98);
+            this.PipelineEbutton.Margin = new System.Windows.Forms.Padding(4);
+            this.PipelineEbutton.Name = "PipelineEbutton";
+            this.PipelineEbutton.Size = new System.Drawing.Size(132, 27);
+            this.PipelineEbutton.TabIndex = 15;
+            this.PipelineEbutton.Text = "PipelineE";
+            this.PipelineEbutton.UseVisualStyleBackColor = true;
+            this.PipelineEbutton.Click += new System.EventHandler(this.ClickPipilineE);
+            // 
+            // CountValuesButton
+            // 
+            this.CountValuesButton.Location = new System.Drawing.Point(769, 132);
+            this.CountValuesButton.Margin = new System.Windows.Forms.Padding(4);
+            this.CountValuesButton.Name = "CountValuesButton";
+            this.CountValuesButton.Size = new System.Drawing.Size(132, 27);
+            this.CountValuesButton.TabIndex = 16;
+            this.CountValuesButton.Text = "Count Different Values";
+            this.CountValuesButton.UseVisualStyleBackColor = true;
+            this.CountValuesButton.Click += new System.EventHandler(this.ClickCountValues);
+            // 
+            // CountNonBGPixel
+            // 
+            this.CountNonBGPixel.Location = new System.Drawing.Point(769, 163);
+            this.CountNonBGPixel.Margin = new System.Windows.Forms.Padding(4);
+            this.CountNonBGPixel.Name = "CountNonBGPixel";
+            this.CountNonBGPixel.Size = new System.Drawing.Size(132, 27);
+            this.CountNonBGPixel.TabIndex = 17;
+            this.CountNonBGPixel.Text = "Count non BG pixels";
+            this.CountNonBGPixel.UseVisualStyleBackColor = true;
+            this.CountNonBGPixel.Click += new System.EventHandler(this.ClickCountNonBGPixel);
+            // 
+            // PipelineGButton
+            // 
+            this.PipelineGButton.Location = new System.Drawing.Point(909, 98);
+            this.PipelineGButton.Margin = new System.Windows.Forms.Padding(4);
+            this.PipelineGButton.Name = "PipelineGButton";
+            this.PipelineGButton.Size = new System.Drawing.Size(132, 27);
+            this.PipelineGButton.TabIndex = 18;
+            this.PipelineGButton.Text = "PipelineG";
+            this.PipelineGButton.UseVisualStyleBackColor = true;
+            this.PipelineGButton.Click += new System.EventHandler(this.ClickPipelineG);
+            // 
             // INFOIBV
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1924, 1053);
+            this.Controls.Add(this.PipelineGButton);
+            this.Controls.Add(this.CountNonBGPixel);
+            this.Controls.Add(this.CountValuesButton);
+            this.Controls.Add(this.PipelineEbutton);
             this.Controls.Add(this.image2FileName);
             this.Controls.Add(this.LoadImageButton);
             this.Controls.Add(this.LoadImage2Button);
             this.Controls.Add(this.DilateButton);
-            this.Controls.Add(this.button3);
-            this.Controls.Add(this.button2);
-            this.Controls.Add(this.button1);
-            this.Controls.Add(this.ApplyButton2);
+            this.Controls.Add(this.ErodeButton);
+            this.Controls.Add(this.LargestObjectbutton);
+            this.Controls.Add(this.DetectAreasButton);
+            this.Controls.Add(this.PipelineZbutton);
             this.Controls.Add(this.progressBar);
             this.Controls.Add(this.pictureBoxOut);
             this.Controls.Add(this.saveButton);
-            this.Controls.Add(this.applyButton);
+            this.Controls.Add(this.PipelineWButton);
             this.Controls.Add(this.pictureBoxIn1);
             this.Controls.Add(this.pictureBoxIn2);
             this.Controls.Add(this.imageFileName);
@@ -260,18 +312,22 @@
         private System.Windows.Forms.TextBox imageFileName;
         private System.Windows.Forms.PictureBox pictureBoxIn1;
         private System.Windows.Forms.PictureBox pictureBoxIn2;
-        private System.Windows.Forms.Button applyButton;
+        private System.Windows.Forms.Button PipelineWButton;
         private System.Windows.Forms.SaveFileDialog saveImageDialog;
         private System.Windows.Forms.Button saveButton;
         private System.Windows.Forms.PictureBox pictureBoxOut;
         private System.Windows.Forms.ProgressBar progressBar;
-        private System.Windows.Forms.Button ApplyButton2;
-        private System.Windows.Forms.Button button1;
-        private System.Windows.Forms.Button button2;
-        private System.Windows.Forms.Button button3;
+        private System.Windows.Forms.Button PipelineZbutton;
+        private System.Windows.Forms.Button DetectAreasButton;
+        private System.Windows.Forms.Button LargestObjectbutton;
+        private System.Windows.Forms.Button ErodeButton;
         private System.Windows.Forms.Button DilateButton;
         private System.Windows.Forms.TextBox image2FileName;
         private System.Windows.Forms.PictureBox pictureBox1;
+        private System.Windows.Forms.Button PipelineEbutton;
+        private System.Windows.Forms.Button CountValuesButton;
+        private System.Windows.Forms.Button CountNonBGPixel;
+        private System.Windows.Forms.Button PipelineGButton;
     }
 }
 
