@@ -136,7 +136,9 @@ namespace INFOIBV
 
             byte[,] thresholded = thresholdImage(edge_det, 60);
 
-            byte[,] workingImage = closeImage(thresholded, createStructuringElement(7, SEShape.Plus), true);
+            List<int> boundary = traceBoundary(thresholded);
+
+            byte[,] workingImage = thresholded;
 
 
             // ==================== END OF YOUR FUNCTION CALLS ====================
@@ -192,7 +194,7 @@ namespace INFOIBV
             pictureBox2.Image = (Image)OutputImage;                         // display output image
         }
 
-        private void ClickChoiceFunction2(object sender, EventArgs e)
+        private void ClickLargestButton(object sender, EventArgs e)
         {
             if (InputImage == null) return;                                 // get out if no input image
             if (OutputImage != null) OutputImage.Dispose();                 // reset output image
@@ -1006,29 +1008,23 @@ namespace INFOIBV
         * output:                      int[] histogram of values
         *                              byte amount of distinct values.
         */
-        Tuple<byte, int[]> countValues(byte[,] inputImage)
+        List<int> countValues(byte[,] inputImage)
         {
-            int[] hist = new int[256];
-            byte ammo = 0;
-
-            for (int i = 0; i < 256; i++)
-            {
-                hist[i] = 0;
-            }
-
+            Dictionary<int, int> hist = new Dictionary<int, int> ();
             for (int x = 0; x < inputImage.GetLength(0); x++)
-            {
                 for (int y = 0; y < inputImage.GetLength(1); y++)
                 {
-                    if (hist[inputImage[x, y]] == 0)
-                    {
-                        ammo++;
-                    }
+                    if (!hist.ContainsKey(inputImage[x, y]))
+                        hist.Add(inputImage[x, y], 0);
                     hist[inputImage[x, y]]++;
                 }
+            List<int> result = new List<int>(hist.Count);
+            for (int i = 0; i < hist.Count; i++) result.Add(0);
+            foreach (var item in hist)
+            {
+                result[item.Key] = item.Value;
             }
-
-            return new Tuple<byte, int[]>(ammo, hist);
+            return result;
         }
 
 
@@ -1041,11 +1037,9 @@ namespace INFOIBV
         {
             byte[,] labels = floodFill(inputImage);
 
-            byte[,] working = adjustContrast(labels);
-
-            Tuple<byte, int[]> tup = countValues(working);
-            tup.Item2[0] = 0;
-            byte counter = (byte)tup.Item2.ToList().IndexOf(tup.Item2.Max());
+            List<int> values = countValues(labels);
+            values[0] = 0;
+            byte counter = (byte) values.IndexOf(values.Max());
             byte[,] temp = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
 
 
@@ -1054,7 +1048,7 @@ namespace INFOIBV
             {
                 for (int y = 0; y < inputImage.GetLength(1); y++)
                 {
-                    if (inputImage[x, y] == counter)
+                    if (labels[x, y] == counter)
                     {
                         temp[x, y] = 255;
                     }
@@ -1243,7 +1237,11 @@ namespace INFOIBV
                 if (end_pixel == pixel && ending_direction == coming_direction)
                 {
                     if (cont == 0) cont = 1;
-                    else return boundary;
+                    else
+                    {
+                        boundary.Remove(boundary.ElementAt(boundary.Count() - 1));
+                        return boundary;
+                    }
                 }
                 for (int i = 0; i < 8; i++)
                 {
@@ -1300,32 +1298,6 @@ namespace INFOIBV
                 }
             return res;
         }
-
-        void rec_flood(int c, int r, ref byte[,] inputImage, ref byte[,] res, byte id, ref List<(int, int)> added)
-        {
-            if (c < 0 || c >= inputImage.GetLength(0) || r < 0 || r >= inputImage.GetLength(1))
-            {
-                return;
-            }
-            if (inputImage[c, r] == 0 || res[c, r] == id)
-            {
-                return;
-            }
-            int prec_res_value = res[c, r];
-            res[c, r] = id;
-            added.Add((c, r));
-            int res_value = res[c, r];
-            int img_value = inputImage[c, r];
-            rec_flood(c + 1, r, ref inputImage, ref res, id, ref added);
-            rec_flood(c - 1, r, ref inputImage, ref res, id, ref added);
-            rec_flood(c, r + 1, ref inputImage, ref res, id, ref added);
-            rec_flood(c, r - 1, ref inputImage, ref res, id, ref added);
-        }
-
-        // ====================================================================
-        // ============= YOUR FUNCTIONS FOR ASSIGNMENT 3 GO HERE ==============
-        // ====================================================================
-
         bool isBinary(byte[,] inputImage)
         {
             for (int c = 0; c < inputImage.GetLength(0); c++)
@@ -1334,6 +1306,11 @@ namespace INFOIBV
                         return false;
             return true;
         }
+
+
+        // ====================================================================
+        // ============= YOUR FUNCTIONS FOR ASSIGNMENT 3 GO HERE ==============
+        // ====================================================================
 
         internal enum SEShape
         {
