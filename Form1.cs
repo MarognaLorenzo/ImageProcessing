@@ -227,6 +227,11 @@ namespace INFOIBV
             pictureBox2.Image = (Image)OutputImage;                         // display output image
         }
 
+        private void button3_Click(object sender, EventArgs e)
+        {
+
+        }
+
 
         /*
          * saveButton_Click: process when user clicks "Save" button
@@ -1340,5 +1345,7 @@ namespace INFOIBV
             Square,
             Plus
         }
+
+
     }
 }
