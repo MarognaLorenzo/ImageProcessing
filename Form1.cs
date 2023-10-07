@@ -10,7 +10,8 @@ namespace INFOIBV
 {
     public partial class INFOIBV : Form
     {
-        private Bitmap InputImage;
+        private Bitmap InputImage1;
+        private Bitmap InputImage2;
         private Bitmap OutputImage;
         sbyte[,] vPrewittfilter = new sbyte[3, 3] { { -1, -1, -1 },
                                              {  0 , 0,  0 },
@@ -58,13 +59,28 @@ namespace INFOIBV
             {
                 string file = openImageDialog.FileName;                     // get the file name
                 imageFileName.Text = file;                                  // show file name
-                if (InputImage != null) InputImage.Dispose();               // reset image
-                InputImage = new Bitmap(file);                              // create new Bitmap from file
-                if (InputImage.Size.Height <= 0 || InputImage.Size.Width <= 0 ||
-                    InputImage.Size.Height > 512 || InputImage.Size.Width > 512) // dimension check (may be removed or altered)
+                if (InputImage1 != null) InputImage1.Dispose();               // reset image
+                InputImage1 = new Bitmap(file);                              // create new Bitmap from file
+                if (InputImage1.Size.Height <= 0 || InputImage1.Size.Width <= 0 ||
+                    InputImage1.Size.Height > 512 || InputImage1.Size.Width > 512) // dimension check (may be removed or altered)
                     MessageBox.Show("Error in image dimensions (have to be > 0 and <= 512)");
                 else
-                    pictureBox1.Image = (Image)InputImage;                 // display input image
+                    pictureBoxIn1.Image = (Image)InputImage1;                 // display input image
+            }
+        }
+        private void loadImageButton2_Click(object sender, EventArgs e)
+        {
+            if (openImageDialog.ShowDialog() == DialogResult.OK)             // open file dialog
+            {
+                string file = openImageDialog.FileName;                     // get the file name
+                image2FileName.Text = file;                                  // show file name
+                if (InputImage2 != null) InputImage2.Dispose();               // reset image
+                InputImage2 = new Bitmap(file);                              // create new Bitmap from file
+                if (InputImage2.Size.Height <= 0 || InputImage2.Size.Width <= 0 ||
+                    InputImage2.Size.Height > 512 || InputImage2.Size.Width > 512) // dimension check (may be removed or altered)
+                    MessageBox.Show("Error in image dimensions (have to be > 0 and <= 512)");
+                else
+                    pictureBoxIn2.Image = (Image)InputImage2;                 // display input image
             }
         }
 
@@ -72,26 +88,23 @@ namespace INFOIBV
         /*
          * applyButton_Click: process when user clicks "image_b" button
          */
-        private void image_b_ButtonClick(object sender, EventArgs e)
+        private void ClickPipilineW(object sender, EventArgs e)
         {
-            if (InputImage == null) return;                                 // get out if no input image
+            if (InputImage1 == null) return;                                 // get out if no input image
             if (OutputImage != null) OutputImage.Dispose();                 // reset output image
-            OutputImage = new Bitmap(InputImage.Size.Width, InputImage.Size.Height); // create new output image
-            Color[,] Image = new Color[InputImage.Size.Width, InputImage.Size.Height]; // create array to speed-up operations (Bitmap functions are very slow)
+            OutputImage = new Bitmap(InputImage1.Size.Width, InputImage1.Size.Height); // create new output image
+            Color[,] Image = new Color[InputImage1.Size.Width, InputImage1.Size.Height]; // create array to speed-up operations (Bitmap functions are very slow)
 
             // copy input Bitmap to array            
-            for (int x = 0; x < InputImage.Size.Width; x++)                 // loop over columns
-                for (int y = 0; y < InputImage.Size.Height; y++)            // loop over rows
-                    Image[x, y] = InputImage.GetPixel(x, y);                // set pixel color in array at (x,y)
+            for (int x = 0; x < InputImage1.Size.Width; x++)                 // loop over columns
+                for (int y = 0; y < InputImage1.Size.Height; y++)            // loop over rows
+                    Image[x, y] = InputImage1.GetPixel(x, y);                // set pixel color in array at (x,y)
 
 
             byte[,] g_scale_image = convertToGrayscale(Image);          // convert image to grayscale
 
-            byte[,] thresholded = thresholdImage(g_scale_image, 127);
+            byte[,] workingImage = thresholdImage(g_scale_image, 127);
 
-            byte[,] labels = floodFill(thresholded);
-
-            byte[,] workingImage = adjustContrast(labels);
 
 
             // ==================== END OF YOUR FUNCTION CALLS ====================
@@ -107,20 +120,90 @@ namespace INFOIBV
                     OutputImage.SetPixel(x, y, newColor);                  // set the pixel color at coordinate (x,y)
                 }
 
-            pictureBox2.Image = (Image)OutputImage;                         // display output image
+            pictureBoxOut.Image = (Image)OutputImage;                         // display output image
+        }
+
+        private void ClickDilateButton(object sender, EventArgs e)
+        {
+            if (InputImage1 == null) return;                                 // get out if no input image
+            if (OutputImage != null) OutputImage.Dispose();                 // reset output image
+            OutputImage = new Bitmap(InputImage1.Size.Width, InputImage1.Size.Height); // create new output image
+            Color[,] Image = new Color[InputImage1.Size.Width, InputImage1.Size.Height]; // create array to speed-up operations (Bitmap functions are very slow)
+
+            // copy input Bitmap to array            
+            for (int x = 0; x < InputImage1.Size.Width; x++)                 // loop over columns
+                for (int y = 0; y < InputImage1.Size.Height; y++)            // loop over rows
+                    Image[x, y] = InputImage1.GetPixel(x, y);                // set pixel color in array at (x,y)
+
+
+            byte[,] g_scale_image = convertToGrayscale(Image);          // convert image to grayscale
+
+            byte[,] workingImage = dilateImage(g_scale_image,createStructuringElement(3,SEShape.Square),isBinary(g_scale_image));
+
+
+
+            // ==================== END OF YOUR FUNCTION CALLS ====================
+            // ====================================================================
+
+            // copy array to output Bitmap
+            for (
+
+                int x = 0; x < workingImage.GetLength(0); x++)             // loop over columns
+                for (int y = 0; y < workingImage.GetLength(1); y++)         // loop over rows
+                {
+                    Color newColor = Color.FromArgb(workingImage[x, y], workingImage[x, y], workingImage[x, y]);
+                    OutputImage.SetPixel(x, y, newColor);                  // set the pixel color at coordinate (x,y)
+                }
+
+            pictureBoxOut.Image = (Image)OutputImage;                         // display output image
+        }
+
+        private void ClickErodeButton(object sender, EventArgs e)
+        {
+            if (InputImage1 == null) return;                                 // get out if no input image
+            if (OutputImage != null) OutputImage.Dispose();                 // reset output image
+            OutputImage = new Bitmap(InputImage1.Size.Width, InputImage1.Size.Height); // create new output image
+            Color[,] Image = new Color[InputImage1.Size.Width, InputImage1.Size.Height]; // create array to speed-up operations (Bitmap functions are very slow)
+
+            // copy input Bitmap to array            
+            for (int x = 0; x < InputImage1.Size.Width; x++)                 // loop over columns
+                for (int y = 0; y < InputImage1.Size.Height; y++)            // loop over rows
+                    Image[x, y] = InputImage1.GetPixel(x, y);                // set pixel color in array at (x,y)
+
+
+            byte[,] g_scale_image = convertToGrayscale(Image);          // convert image to grayscale
+
+            byte[,] workingImage = erodeImage(g_scale_image, createStructuringElement(3, SEShape.Square), isBinary(g_scale_image));
+
+
+
+            // ==================== END OF YOUR FUNCTION CALLS ====================
+            // ====================================================================
+
+            // copy array to output Bitmap
+            for (
+
+                int x = 0; x < workingImage.GetLength(0); x++)             // loop over columns
+                for (int y = 0; y < workingImage.GetLength(1); y++)         // loop over rows
+                {
+                    Color newColor = Color.FromArgb(workingImage[x, y], workingImage[x, y], workingImage[x, y]);
+                    OutputImage.SetPixel(x, y, newColor);                  // set the pixel color at coordinate (x,y)
+                }
+
+            pictureBoxOut.Image = (Image)OutputImage;                         // display output image
         }
 
         private void image_c_ButtonClick(object sender, EventArgs e)
         {
-            if (InputImage == null) return;                                 // get out if no input image
+            if (InputImage1 == null) return;                                 // get out if no input image
             if (OutputImage != null) OutputImage.Dispose();                 // reset output image
-            OutputImage = new Bitmap(InputImage.Size.Width, InputImage.Size.Height); // create new output image
-            Color[,] Image = new Color[InputImage.Size.Width, InputImage.Size.Height]; // create array to speed-up operations (Bitmap functions are very slow)
+            OutputImage = new Bitmap(InputImage1.Size.Width, InputImage1.Size.Height); // create new output image
+            Color[,] Image = new Color[InputImage1.Size.Width, InputImage1.Size.Height]; // create array to speed-up operations (Bitmap functions are very slow)
 
             // copy input Bitmap to array            
-            for (int x = 0; x < InputImage.Size.Width; x++)                 // loop over columns
-                for (int y = 0; y < InputImage.Size.Height; y++)            // loop over rows
-                    Image[x, y] = InputImage.GetPixel(x, y);                // set pixel color in array at (x,y)
+            for (int x = 0; x < InputImage1.Size.Width; x++)                 // loop over columns
+                for (int y = 0; y < InputImage1.Size.Height; y++)            // loop over rows
+                    Image[x, y] = InputImage1.GetPixel(x, y);                // set pixel color in array at (x,y)
 
             // ====================================================================
             // =================== YOUR FUNCTION CALLS GO HERE ====================
@@ -136,7 +219,9 @@ namespace INFOIBV
 
             byte[,] thresholded = thresholdImage(edge_det, 60);
 
-            byte[,] workingImage = closeImage(thresholded, createStructuringElement(7, SEShape.Plus), true);
+            List<int> boundary = traceBoundary(thresholded);
+
+            byte[,] workingImage = thresholded;
 
 
             // ==================== END OF YOUR FUNCTION CALLS ====================
@@ -152,20 +237,20 @@ namespace INFOIBV
                     OutputImage.SetPixel(x, y, newColor);                  // set the pixel color at coordinate (x,y)
                 }
 
-            pictureBox2.Image = (Image)OutputImage;                         // display output image
+            pictureBoxOut.Image = (Image)OutputImage;                         // display output image
         }
 
         private void ClickFloodFillButton(object sender, EventArgs e)
         {
-            if (InputImage == null) return;                                 // get out if no input image
+            if (InputImage1 == null) return;                                 // get out if no input image
             if (OutputImage != null) OutputImage.Dispose();                 // reset output image
-            OutputImage = new Bitmap(InputImage.Size.Width, InputImage.Size.Height); // create new output image
-            Color[,] Image = new Color[InputImage.Size.Width, InputImage.Size.Height]; // create array to speed-up operations (Bitmap functions are very slow)
+            OutputImage = new Bitmap(InputImage1.Size.Width, InputImage1.Size.Height); // create new output image
+            Color[,] Image = new Color[InputImage1.Size.Width, InputImage1.Size.Height]; // create array to speed-up operations (Bitmap functions are very slow)
 
             // copy input Bitmap to array            
-            for (int x = 0; x < InputImage.Size.Width; x++)                 // loop over columns
-                for (int y = 0; y < InputImage.Size.Height; y++)            // loop over rows
-                    Image[x, y] = InputImage.GetPixel(x, y);                // set pixel color in array at (x,y)
+            for (int x = 0; x < InputImage1.Size.Width; x++)                 // loop over columns
+                for (int y = 0; y < InputImage1.Size.Height; y++)            // loop over rows
+                    Image[x, y] = InputImage1.GetPixel(x, y);                // set pixel color in array at (x,y)
 
 
             byte[,] g_scale_image = convertToGrayscale(Image);          // convert image to grayscale
@@ -189,20 +274,20 @@ namespace INFOIBV
                     OutputImage.SetPixel(x, y, newColor);                  // set the pixel color at coordinate (x,y)
                 }
 
-            pictureBox2.Image = (Image)OutputImage;                         // display output image
+            pictureBoxOut.Image = (Image)OutputImage;                         // display output image
         }
 
-        private void ClickChoiceFunction2(object sender, EventArgs e)
+        private void ClickLargestButton(object sender, EventArgs e)
         {
-            if (InputImage == null) return;                                 // get out if no input image
+            if (InputImage1 == null) return;                                 // get out if no input image
             if (OutputImage != null) OutputImage.Dispose();                 // reset output image
-            OutputImage = new Bitmap(InputImage.Size.Width, InputImage.Size.Height); // create new output image
-            Color[,] Image = new Color[InputImage.Size.Width, InputImage.Size.Height]; // create array to speed-up operations (Bitmap functions are very slow)
+            OutputImage = new Bitmap(InputImage1.Size.Width, InputImage1.Size.Height); // create new output image
+            Color[,] Image = new Color[InputImage1.Size.Width, InputImage1.Size.Height]; // create array to speed-up operations (Bitmap functions are very slow)
 
             // copy input Bitmap to array            
-            for (int x = 0; x < InputImage.Size.Width; x++)                 // loop over columns
-                for (int y = 0; y < InputImage.Size.Height; y++)            // loop over rows
-                    Image[x, y] = InputImage.GetPixel(x, y);                // set pixel color in array at (x,y)
+            for (int x = 0; x < InputImage1.Size.Width; x++)                 // loop over columns
+                for (int y = 0; y < InputImage1.Size.Height; y++)            // loop over rows
+                    Image[x, y] = InputImage1.GetPixel(x, y);                // set pixel color in array at (x,y)
 
 
             // INSERT YOUR FUNCTION PIPELINE
@@ -224,7 +309,7 @@ namespace INFOIBV
                     OutputImage.SetPixel(x, y, newColor);                  // set the pixel color at coordinate (x,y)
                 }
 
-            pictureBox2.Image = (Image)OutputImage;                         // display output image
+            pictureBoxOut.Image = (Image)OutputImage;                         // display output image
         }
 
         private void button3_Click(object sender, EventArgs e)
@@ -257,13 +342,13 @@ namespace INFOIBV
             // setup progress bar
             progressBar.Visible = true;
             progressBar.Minimum = 1;
-            progressBar.Maximum = InputImage.Size.Width * InputImage.Size.Height;
+            progressBar.Maximum = InputImage1.Size.Width * InputImage1.Size.Height;
             progressBar.Value = 1;
             progressBar.Step = 1;
 
             // process all pixels in the image
-            for (int x = 0; x < InputImage.Size.Width; x++)                 // loop over columns
-                for (int y = 0; y < InputImage.Size.Height; y++)            // loop over rows
+            for (int x = 0; x < InputImage1.Size.Width; x++)                 // loop over columns
+                for (int y = 0; y < InputImage1.Size.Height; y++)            // loop over rows
                 {
                     Color pixelColor = inputImage[x, y];                    // get pixel color
                     byte average = (byte)((pixelColor.R + pixelColor.B + pixelColor.G) / 3); // calculate average over the three channels
@@ -294,13 +379,13 @@ namespace INFOIBV
             // setup progress bar
             progressBar.Visible = true;
             progressBar.Minimum = 1;
-            progressBar.Maximum = InputImage.Size.Width * InputImage.Size.Height;
+            progressBar.Maximum = InputImage1.Size.Width * InputImage1.Size.Height;
             progressBar.Value = 1;
             progressBar.Step = 1;
 
             // process all pixels in the image
-            for (int x = 0; x < InputImage.Size.Width; x++)                 // loop over columns
-                for (int y = 0; y < InputImage.Size.Height; y++)            // loop over rows
+            for (int x = 0; x < InputImage1.Size.Width; x++)                 // loop over columns
+                for (int y = 0; y < InputImage1.Size.Height; y++)            // loop over rows
                 {
                     // get pixel color
                     tempImage[x, y] = (byte)(255 - inputImage[x, y]);      // invert pixel
@@ -328,8 +413,8 @@ namespace INFOIBV
 
             int[] histogram = new int[256];
             for (int a = 0; a < histogram.Length; a++) histogram[a] = 0;
-            for (int x = 0; x < InputImage.Size.Width; x++)                 // loop over columns
-                for (int y = 0; y < InputImage.Size.Height; y++)            // loop over rows
+            for (int x = 0; x < InputImage1.Size.Width; x++)                 // loop over columns
+                for (int y = 0; y < InputImage1.Size.Height; y++)            // loop over rows
                     histogram[inputImage[x, y]]++;
 
             // Calculating actual contrast
@@ -341,21 +426,21 @@ namespace INFOIBV
             // setup progress bar
             progressBar.Visible = true;
             progressBar.Minimum = 1;
-            progressBar.Maximum = InputImage.Size.Width * InputImage.Size.Height;
+            progressBar.Maximum = InputImage1.Size.Width * InputImage1.Size.Height;
             progressBar.Value = 1;
             progressBar.Step = 1;
 
             // process all pixels in the image
-            for (int x = 0; x < InputImage.Size.Width; x++)                 // loop over columns
-                for (int y = 0; y < InputImage.Size.Height; y++)            // loop over rows
+            for (int x = 0; x < InputImage1.Size.Width; x++)                 // loop over columns
+                for (int y = 0; y < InputImage1.Size.Height; y++)            // loop over rows
                 {
                     // get pixel color
                     tempImage[x, y] = (byte)((inputImage[x, y] - lower_bound) * ((float)255 / (float)(upper_bound - lower_bound)));
                     progressBar.PerformStep();                              // increment progress bar
                 }
             for (int a = 0; a < histogram.Length; a++) histogram[a] = 0;
-            for (int x = 0; x < InputImage.Size.Width; x++)                 // loop over columns
-                for (int y = 0; y < InputImage.Size.Height; y++)            // loop over rows
+            for (int x = 0; x < InputImage1.Size.Width; x++)                 // loop over columns
+                for (int y = 0; y < InputImage1.Size.Height; y++)            // loop over rows
                     histogram[tempImage[x, y]]++;
             progressBar.Visible = false;
 
@@ -422,7 +507,7 @@ namespace INFOIBV
             // setup progress bar
             progressBar.Visible = true;
             progressBar.Minimum = 1;
-            progressBar.Maximum = InputImage.Size.Width * InputImage.Size.Height;
+            progressBar.Maximum = InputImage1.Size.Width * InputImage1.Size.Height;
             progressBar.Value = 1;
             progressBar.Step = 1;
 
@@ -505,7 +590,7 @@ namespace INFOIBV
             //Setup progress bar.
             progressBar.Visible = true;
             progressBar.Minimum = 1;
-            progressBar.Maximum = InputImage.Size.Width * InputImage.Size.Height;
+            progressBar.Maximum = InputImage1.Size.Width * InputImage1.Size.Height;
             progressBar.Value = 1;
             progressBar.Step = 1;
 
@@ -588,7 +673,7 @@ namespace INFOIBV
             //Setup progress bar.
             progressBar.Visible = true;
             progressBar.Minimum = 1;
-            progressBar.Maximum = InputImage.Size.Width * InputImage.Size.Height;
+            progressBar.Maximum = InputImage1.Size.Width * InputImage1.Size.Height;
             progressBar.Value = 1;
             progressBar.Step = 1;
 
@@ -671,7 +756,7 @@ namespace INFOIBV
             // setup progress bar
             progressBar.Visible = true;
             progressBar.Minimum = 1;
-            progressBar.Maximum = InputImage.Size.Width * InputImage.Size.Height;
+            progressBar.Maximum = InputImage1.Size.Width * InputImage1.Size.Height;
             progressBar.Value = 1;
             progressBar.Step = 1;
 
@@ -755,13 +840,13 @@ namespace INFOIBV
             // setup progress bar
             progressBar.Visible = true;
             progressBar.Minimum = 1;
-            progressBar.Maximum = InputImage.Size.Width * InputImage.Size.Height;
+            progressBar.Maximum = InputImage1.Size.Width * InputImage1.Size.Height;
             progressBar.Value = 1;
             progressBar.Step = 1;
 
             // process all pixels in the image
-            for (int x = 0; x < InputImage.Size.Width; x++)                 // loop over columns
-                for (int y = 0; y < InputImage.Size.Height; y++)            // loop over rows
+            for (int x = 0; x < InputImage1.Size.Width; x++)                 // loop over columns
+                for (int y = 0; y < InputImage1.Size.Height; y++)            // loop over rows
                 {
                     // get pixel color
                     tempImage[x, y] = (byte)(inputImage[x, y] >= th ? 255 : 0);
@@ -784,7 +869,7 @@ namespace INFOIBV
             // setup progress bar
             progressBar.Visible = true;
             progressBar.Minimum = 1;
-            progressBar.Maximum = InputImage.Size.Width * InputImage.Size.Height;
+            progressBar.Maximum = InputImage1.Size.Width * InputImage1.Size.Height;
             progressBar.Value = 1;
             progressBar.Step = 1;
 
@@ -1011,29 +1096,23 @@ namespace INFOIBV
         * output:                      int[] histogram of values
         *                              byte amount of distinct values.
         */
-        Tuple<byte, int[]> countValues(byte[,] inputImage)
+        List<int> countValues(byte[,] inputImage)
         {
-            int[] hist = new int[256];
-            byte ammo = 0;
-
-            for (int i = 0; i < 256; i++)
-            {
-                hist[i] = 0;
-            }
-
+            Dictionary<int, int> hist = new Dictionary<int, int> ();
             for (int x = 0; x < inputImage.GetLength(0); x++)
-            {
                 for (int y = 0; y < inputImage.GetLength(1); y++)
                 {
-                    if (hist[inputImage[x, y]] == 0)
-                    {
-                        ammo++;
-                    }
+                    if (!hist.ContainsKey(inputImage[x, y]))
+                        hist.Add(inputImage[x, y], 0);
                     hist[inputImage[x, y]]++;
                 }
+            List<int> result = new List<int>(hist.Count);
+            for (int i = 0; i < hist.Count; i++) result.Add(0);
+            foreach (var item in hist)
+            {
+                result[item.Key] = item.Value;
             }
-
-            return new Tuple<byte, int[]>(ammo, hist);
+            return result;
         }
 
 
@@ -1046,11 +1125,9 @@ namespace INFOIBV
         {
             byte[,] labels = floodFill(inputImage);
 
-            byte[,] working = adjustContrast(labels);
-
-            Tuple<byte, int[]> tup = countValues(working);
-            tup.Item2[0] = 0;
-            byte counter = (byte)tup.Item2.ToList().IndexOf(tup.Item2.Max());
+            List<int> values = countValues(labels);
+            values[0] = 0;
+            byte counter = (byte) values.IndexOf(values.Max());
             byte[,] temp = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
 
 
@@ -1059,7 +1136,7 @@ namespace INFOIBV
             {
                 for (int y = 0; y < inputImage.GetLength(1); y++)
                 {
-                    if (inputImage[x, y] == counter)
+                    if (labels[x, y] == counter)
                     {
                         temp[x, y] = 255;
                     }
@@ -1248,7 +1325,11 @@ namespace INFOIBV
                 if (end_pixel == pixel && ending_direction == coming_direction)
                 {
                     if (cont == 0) cont = 1;
-                    else return boundary;
+                    else
+                    {
+                        boundary.Remove(boundary.ElementAt(boundary.Count() - 1));
+                        return boundary;
+                    }
                 }
                 for (int i = 0; i < 8; i++)
                 {
@@ -1305,32 +1386,6 @@ namespace INFOIBV
                 }
             return res;
         }
-
-        void rec_flood(int c, int r, ref byte[,] inputImage, ref byte[,] res, byte id, ref List<(int, int)> added)
-        {
-            if (c < 0 || c >= inputImage.GetLength(0) || r < 0 || r >= inputImage.GetLength(1))
-            {
-                return;
-            }
-            if (inputImage[c, r] == 0 || res[c, r] == id)
-            {
-                return;
-            }
-            int prec_res_value = res[c, r];
-            res[c, r] = id;
-            added.Add((c, r));
-            int res_value = res[c, r];
-            int img_value = inputImage[c, r];
-            rec_flood(c + 1, r, ref inputImage, ref res, id, ref added);
-            rec_flood(c - 1, r, ref inputImage, ref res, id, ref added);
-            rec_flood(c, r + 1, ref inputImage, ref res, id, ref added);
-            rec_flood(c, r - 1, ref inputImage, ref res, id, ref added);
-        }
-
-        // ====================================================================
-        // ============= YOUR FUNCTIONS FOR ASSIGNMENT 3 GO HERE ==============
-        // ====================================================================
-
         bool isBinary(byte[,] inputImage)
         {
             for (int c = 0; c < inputImage.GetLength(0); c++)
@@ -1340,12 +1395,15 @@ namespace INFOIBV
             return true;
         }
 
+
+        // ====================================================================
+        // ============= YOUR FUNCTIONS FOR ASSIGNMENT 3 GO HERE ==============
+        // ====================================================================
+
         internal enum SEShape
         {
             Square,
             Plus
         }
-
-
     }
 }
