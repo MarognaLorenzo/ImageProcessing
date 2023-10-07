@@ -456,7 +456,7 @@ namespace INFOIBV
             byte[,] g_scale_image = convertToGrayscale(Image);          // convert image to grayscale
 
             byte[,] thresholded = thresholdImage(g_scale_image, 127);
-            byte[,] SE1 = createStructuringElement(83, SEShape.Plus);
+            byte[,] SE1 = createStructuringElement(3, SEShape.Plus);
             byte[,] close = closeImage(thresholded, SE1, isBinary(thresholded));
 
             byte[,] workingImage = close;
@@ -1426,7 +1426,7 @@ namespace INFOIBV
         */
         byte[,] openImage(byte[,] inputImage, byte[,] SE, bool binary)
         {
-            return erodeImage(dilateImage(inputImage, SE, binary), SE, binary);
+            return dilateImage(erodeImage(inputImage, SE, binary), SE, binary);
         }
 
         /*
@@ -1438,7 +1438,7 @@ namespace INFOIBV
         */
         byte[,] closeImage(byte[,] inputImage, byte[,] SE, bool binary)
         {
-            return dilateImage(erodeImage(inputImage, SE, binary), SE, binary);
+            return erodeImage(dilateImage(inputImage, SE, binary), SE, binary);
         }
         //Boundary trace: implement a function(traceBoundary) that, given a binary image, 
         //    traces the outer boundary of a foreground shape in that image.The output of 
