@@ -1452,6 +1452,8 @@ namespace INFOIBV
             {
                 for (int y = 0; y < inputImage1.GetLength(1); y++)
                 {
+                    byte p1 = (byte)inputImage1[x, y];
+                    byte p2 = (byte)inputImage2[x, y];
                     if (inputImage1[x, y] != 0 || inputImage2[x, y] != 0)
                     {
                         temp[x, y] = inputImage1[x, y];
