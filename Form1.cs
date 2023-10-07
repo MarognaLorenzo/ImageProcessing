@@ -1413,7 +1413,7 @@ namespace INFOIBV
                     byte p2 = (byte)inputImage2[x, y];
                     if (inputImage1[x, y] != 0 || inputImage2[x, y] != 0)
                     {
-                        temp[x, y] = inputImage1[x, y];
+                        temp[x, y] = 255;
                     }
                     else
                     {
