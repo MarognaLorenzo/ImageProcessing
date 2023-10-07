@@ -103,12 +103,7 @@ namespace INFOIBV
 
             byte[,] g_scale_image = convertToGrayscale(Image);          // convert image to grayscale
 
-            byte[,] workingImage = thresholdImage(g_scale_image, 127);
-
-
-
-            // ==================== END OF YOUR FUNCTION CALLS ====================
-            // ====================================================================
+            byte[,] workingImage = thresholdImage(g_scale_image, 127);0
 
             // copy array to output Bitmap
             for (
@@ -147,10 +142,6 @@ namespace INFOIBV
             byte[,] workingImage = dilate1;
 
 
-
-            // ==================== END OF YOUR FUNCTION CALLS ====================
-            // ====================================================================
-
             // copy array to output Bitmap
             for (
 
@@ -180,11 +171,6 @@ namespace INFOIBV
             byte[,] g_scale_image = convertToGrayscale(Image);          // convert image to grayscale
 
             byte[,] workingImage = dilateImage(g_scale_image, createStructuringElement(3, SEShape.Square), isBinary(g_scale_image));
-
-
-
-            // ==================== END OF YOUR FUNCTION CALLS ====================
-            // ====================================================================
 
             // copy array to output Bitmap
             for (
@@ -217,10 +203,6 @@ namespace INFOIBV
             byte[,] workingImage = erodeImage(g_scale_image, createStructuringElement(3, SEShape.Square), isBinary(g_scale_image));
 
 
-
-            // ==================== END OF YOUR FUNCTION CALLS ====================
-            // ====================================================================
-
             // copy array to output Bitmap
             for (
 
@@ -251,10 +233,6 @@ namespace INFOIBV
                     Image2[x, y] = InputImage2.GetPixel(x, y);                // set pixel color in array at (x,y)
                 }// loop over rows
 
-            // ====================================================================
-            // =================== YOUR FUNCTION CALLS GO HERE ====================
-            // Alternatively you can create buttons to invoke certain functionality
-            // ====================================================================
 
 
             byte[,] img1 = convertToGrayscale(Image1);          // convert image to grayscale
@@ -266,8 +244,6 @@ namespace INFOIBV
 
             byte[,] workingImage = andImages(img1, compl2);
 
-            // ==================== END OF YOUR FUNCTION CALLS ====================
-            // ====================================================================
 
             // copy array to output Bitmap
             for (
@@ -303,9 +279,6 @@ namespace INFOIBV
 
             byte[,] workingImage = adjustContrast(labels);
 
-            // ==================== END OF YOUR FUNCTION CALLS ====================
-            // ====================================================================
-
             // copy array to output Bitmap
             for (
 
@@ -330,9 +303,6 @@ namespace INFOIBV
             for (int x = 0; x < InputImage1.Size.Width; x++)                 // loop over columns
                 for (int y = 0; y < InputImage1.Size.Height; y++)            // loop over rows
                     Image[x, y] = InputImage1.GetPixel(x, y);                // set pixel color in array at (x,y)
-
-
-            // INSERT YOUR FUNCTION PIPELINE
 
             byte[,] g_scale_image = convertToGrayscale(Image);          // convert image to grayscale
 
@@ -380,9 +350,6 @@ namespace INFOIBV
 
             byte[,] workingImage = g_scale_image;
 
-            // ==================== END OF YOUR FUNCTION CALLS ====================
-            // ====================================================================
-
             // copy array to output Bitmap
             for (
 
@@ -424,8 +391,6 @@ namespace INFOIBV
 
             byte[,] workingImage = g_scale_image;
 
-            // ==================== END OF YOUR FUNCTION CALLS ====================
-            // ====================================================================
 
             // copy array to output Bitmap
             for (
@@ -461,10 +426,6 @@ namespace INFOIBV
 
             byte[,] workingImage = close;
 
-
-
-            // ==================== END OF YOUR FUNCTION CALLS ====================
-            // ====================================================================
 
             // copy array to output Bitmap
             for (
@@ -1071,20 +1032,21 @@ namespace INFOIBV
                 byte[,] SE = new byte[size, size];
                 for (int r = 0; r < size; r++)
                     for (int c = 0; c < size; c++)
-                        SE[r, c] = 1;
+                        SE[r, c] = 1;                   // fill the square with ones and return
                 return SE;
             }
-            byte[,] tmp_SE = { { 1 } };
+            // Plus shaped 
+            byte[,] tmp_SE = { { 1 } };                 // base element
             int tmp_SE_dim = 1;
-            int n_repetition = (size - 1) / 2;
-            for (int i = 0; i < n_repetition; i++)
+            int n_repetition = (size - 1) / 2;          // compucte n of time to dilate
+            for (int i = 0; i < n_repetition; i++)      //for n times
             {
-                int new_SE_dim = tmp_SE_dim + 2;
+                int new_SE_dim = tmp_SE_dim + 2;        //prepare dilation result
                 byte[,] newSE = new byte[new_SE_dim, new_SE_dim];
                 for (int r = 0; r < tmp_SE_dim; r++)
                     for (int c = 0; c < tmp_SE_dim; c++)
                     {
-                        if (tmp_SE[r, c] == 0) continue;
+                        if (tmp_SE[r, c] == 0) continue; // dilate
                         newSE[r + 1, c + 1] = 1; // corresponding pixel
                         newSE[r + 2, c + 1] = 1; //pixel below
                         newSE[r, c + 1] = 1; //pixel over
@@ -1092,7 +1054,7 @@ namespace INFOIBV
                         newSE[r + 1, c] = 1; // pixel on the left
                     }
                 tmp_SE = newSE;
-                tmp_SE_dim = new_SE_dim;
+                tmp_SE_dim = new_SE_dim;        // reassign result
             }
             return tmp_SE;
         }
@@ -1479,7 +1441,7 @@ namespace INFOIBV
         */
         byte[,] openImage(byte[,] inputImage, byte[,] SE, bool binary)
         {
-            return dilateImage(erodeImage(inputImage, SE, binary), SE, binary);
+            return dilateImage(erodeImage(inputImage, SE, binary), SE, binary); // erode image, than dilate
         }
 
         /*
@@ -1491,7 +1453,7 @@ namespace INFOIBV
         */
         byte[,] closeImage(byte[,] inputImage, byte[,] SE, bool binary)
         {
-            return erodeImage(dilateImage(inputImage, SE, binary), SE, binary);
+            return erodeImage(dilateImage(inputImage, SE, binary), SE, binary); // dilate image, then erode
         }
         //Boundary trace: implement a function(traceBoundary) that, given a binary image, 
         //    traces the outer boundary of a foreground shape in that image.The output of 
@@ -1514,26 +1476,26 @@ namespace INFOIBV
                 for (int c = 0; c < inputImage.GetLength(0); c++)
                     if (inputImage[c, r] == 255)
                     {
-                        pixel = (r, c);
+                        pixel = (r, c); // find the first pixel in the area
                         stop = true;
                         break;
                     }
                 if (stop) break;
             }
-            (int, int) end_pixel = (-10, -10);
+            (int, int) end_pixel = (-10, -10);      // end pixel and end direction are there for exiting the function whant the tracing is complete
             int ending_direction = -1;
             int dir_to_look;
             int coming_direction = -1;
-            for (int i = 0; i < 8; i++)
+            for (int i = 0; i < 8; i++)             // look for the next pixel to set as the ending pixel together with the direction
             {
-                dir_to_look = (direction + i) % 8;
+                dir_to_look = (direction + i) % 8;  // compute direction
                 (int, int) movement_matrix_r_c = contourDict[dir_to_look];
                 int r = pixel.Item1 + movement_matrix_r_c.Item2;
-                int c = pixel.Item2 + movement_matrix_r_c.Item1;
-                if (r < 0 || r > inputImage.GetLength(1) || c < 0 || c > inputImage.GetLength(0)) continue;
-                if (inputImage[c, r] == 0) continue;
+                int c = pixel.Item2 + movement_matrix_r_c.Item1; // compute new coords
+                if (r < 0 || r > inputImage.GetLength(1) || c < 0 || c > inputImage.GetLength(0)) continue; //check validity
+                if (inputImage[c, r] == 0) continue; // if pixel is bg it is not part of the boundary
                 if (inputImage[c, r] != 255) throw new Exception("Image is not binary");
-                boundary.Add(dir_to_look);
+                boundary.Add(dir_to_look);          // second pixel found, storing direction and end_pixel
                 ending_direction = dir_to_look;
                 coming_direction = ending_direction;
                 direction = (dir_to_look + 6) % 8;
@@ -1541,30 +1503,30 @@ namespace INFOIBV
                 end_pixel = (r, c);
                 break;
             }
-            if (ending_direction == -1) return boundary;
+            if (ending_direction == -1) return boundary; // single pixel instead of an area
 
             int cont = 0;
             while (true)
             {
-                if (end_pixel == pixel && ending_direction == coming_direction)
+                if (end_pixel == pixel && ending_direction == coming_direction) // first time the condition is true is because contour tracing just started
                 {
                     if (cont == 0) cont = 1;
                     else
                     {
-                        boundary.Remove(boundary.ElementAt(boundary.Count() - 1));
+                        boundary.Remove(boundary.ElementAt(boundary.Count() - 1)); // second time the condition is true we drop the last element, equal to the first one, and return
                         return boundary;
                     }
                 }
                 for (int i = 0; i < 8; i++)
                 {
-                    dir_to_look = (direction + i) % 8;
+                    dir_to_look = (direction + i) % 8; // compute direction to look at
                     (int, int) movement_matrix_r_c = contourDict[dir_to_look];
                     int r = pixel.Item1 + movement_matrix_r_c.Item2;
-                    int c = pixel.Item2 + movement_matrix_r_c.Item1;
-                    if (r < 0 || r >= inputImage.GetLength(1) || c < 0 || c >= inputImage.GetLength(0)) continue;
-                    if (inputImage[c, r] == 0) continue;
+                    int c = pixel.Item2 + movement_matrix_r_c.Item1; // compute new coord
+                    if (r < 0 || r >= inputImage.GetLength(1) || c < 0 || c >= inputImage.GetLength(0)) continue; // check validity
+                    if (inputImage[c, r] == 0) continue; // if the pixel is not fg it is not boundary
                     if (inputImage[c, r] != 255) throw new Exception("Image is not binary");
-                    boundary.Add(dir_to_look);
+                    boundary.Add(dir_to_look); // add pixel to contour and update direction
                     direction = (dir_to_look + 6) % 8;
                     pixel = (r, c);
                     break;
@@ -1581,35 +1543,41 @@ namespace INFOIBV
         byte[,] floodFill(byte[,] inputImage)
         {
             if (!isBinary(inputImage)) throw new Exception("Image is not binary");
-            byte id = 1;
+            byte id = 1;   // initialize label
             byte[,] res = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
             for (int r = 0; r < inputImage.GetLength(1); r++)
                 for (int c = 0; c < inputImage.GetLength(0); c++)
                 {
-                    if (inputImage[c, r] == 0 || res[c, r] != 0) continue;
+                    if (inputImage[c, r] == 0 || res[c, r] != 0) continue; // looking for fg unlabeld pixels
                     Queue<(int, int)> q = new Queue<(int, int)>();
                     q.Enqueue((c, r));
-                    while (q.Any())
+                    while (q.Any()) // start labeling new area
                     {
-                        (int col, int row) = q.Dequeue();
+                        (int col, int row) = q.Dequeue(); // get pixel coords
                         if (col < 0 || col >= inputImage.GetLength(0) || row < 0 || row >= inputImage.GetLength(1))
-                        {
+                        {       // check if coords are valid
                             continue;
                         }
                         if (inputImage[col, row] == 0 || res[col, row] == id)
-                        {
+                        { // skip bg or already labeled pixels
                             continue;
                         }
-                        res[col, row] = id;
+                        res[col, row] = id; // label and add neighbours to the queue
                         q.Enqueue((col + 1, row));
                         q.Enqueue((col - 1, row));
                         q.Enqueue((col, row + 1));
                         q.Enqueue((col, row - 1));
                     }
-                    id++;
+                    id++; // when labeling is finished, change label number
                 }
             return res;
         }
+
+        /*
+        * isBinary: takes as input a single channel image and return true only if all values of the image are either 0 or 255
+        * input:   inputImage          single channel  image
+        * output:                      bool value, true if image is binary
+        */
         bool isBinary(byte[,] inputImage)
         {
             for (int c = 0; c < inputImage.GetLength(0); c++)
