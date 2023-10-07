@@ -150,9 +150,9 @@
             this.ApplyButton2.Name = "ApplyButton2";
             this.ApplyButton2.Size = new System.Drawing.Size(132, 27);
             this.ApplyButton2.TabIndex = 7;
-            this.ApplyButton2.Text = "ImageC";
+            this.ApplyButton2.Text = "PipelineZ";
             this.ApplyButton2.UseVisualStyleBackColor = true;
-            this.ApplyButton2.Click += new System.EventHandler(this.image_c_ButtonClick);
+            this.ApplyButton2.Click += new System.EventHandler(this.ClickPipelineZ);
             // 
             // button1
             // 

@@ -193,17 +193,22 @@ namespace INFOIBV
             pictureBoxOut.Image = (Image)OutputImage;                         // display output image
         }
 
-        private void image_c_ButtonClick(object sender, EventArgs e)
+        private void ClickPipelineZ(object sender, EventArgs e)
         {
-            if (InputImage1 == null) return;                                 // get out if no input image
+            if (InputImage1 == null || InputImage2 == null) return; // get out if no input image
+            if (InputImage1.Width != InputImage2.Width || InputImage1.Height != InputImage2.Height) throw new Exception ("Images not compatible");
             if (OutputImage != null) OutputImage.Dispose();                 // reset output image
             OutputImage = new Bitmap(InputImage1.Size.Width, InputImage1.Size.Height); // create new output image
-            Color[,] Image = new Color[InputImage1.Size.Width, InputImage1.Size.Height]; // create array to speed-up operations (Bitmap functions are very slow)
+            Color[,] Image1 = new Color[InputImage1.Size.Width, InputImage1.Size.Height]; // create array to speed-up operations (Bitmap functions are very slow)
+            Color[,] Image2 = new Color[InputImage1.Size.Width, InputImage1.Size.Height]; // create array to speed-up operations (Bitmap functions are very slow)
 
             // copy input Bitmap to array            
             for (int x = 0; x < InputImage1.Size.Width; x++)                 // loop over columns
-                for (int y = 0; y < InputImage1.Size.Height; y++)            // loop over rows
-                    Image[x, y] = InputImage1.GetPixel(x, y);                // set pixel color in array at (x,y)
+                for (int y = 0; y < InputImage1.Size.Height; y++)
+                { 
+                    Image1[x, y] = InputImage1.GetPixel(x, y);                // set pixel color in array at (x,y)
+                    Image2[x, y] = InputImage2.GetPixel(x, y);                // set pixel color in array at (x,y)
+                }// loop over rows
 
             // ====================================================================
             // =================== YOUR FUNCTION CALLS GO HERE ====================
@@ -211,18 +216,14 @@ namespace INFOIBV
             // ====================================================================
 
 
-            byte[,] g_scale_image = convertToGrayscale(Image);          // convert image to grayscale
+            byte[,] img1 = convertToGrayscale(Image1);          // convert image to grayscale
+            byte[,] img2 = convertToGrayscale(Image2);          // convert image to grayscale
 
-            byte[,] med_filter = medianFilter(g_scale_image, 5);
+            if(!isBinary(img1) || !isBinary(img2)) throw new Exception("Images are not binary");
 
-            byte[,] edge_det = edgeMagnitude(med_filter, hPrewittfilter, vPrewittfilter);
+            byte[,] compl2 = invertImage(img2);
 
-            byte[,] thresholded = thresholdImage(edge_det, 60);
-
-            List<int> boundary = traceBoundary(thresholded);
-
-            byte[,] workingImage = thresholded;
-
+            byte[,] workingImage = andImages(img1, compl2);
 
             // ==================== END OF YOUR FUNCTION CALLS ====================
             // ====================================================================
@@ -1194,9 +1195,10 @@ namespace INFOIBV
             byte[,] temp = new byte[inputImage1.GetLength(0), inputImage1.GetLength(1)];
 
             for (int x = 0; x < inputImage1.GetLength(0); x++)
-            {
                 for (int y = 0; y < inputImage1.GetLength(1); y++)
                 {
+                    byte p1 = (byte)inputImage1[x, y];
+                    byte p2 = (byte)inputImage2[x, y];
                     if (inputImage1[x, y] != 0 && inputImage2[x, y] != 0)
                     {
                         temp[x, y] = inputImage1[x, y];
@@ -1206,7 +1208,6 @@ namespace INFOIBV
                         temp[x, y] = 0;
                     }
                 }
-            }
 
             return temp;
         }
