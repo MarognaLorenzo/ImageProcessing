@@ -95,7 +95,7 @@ namespace INFOIBV
             thresholded[152, 53] = 0;
 
             List<Segment> segments = hough_line_detection(thresholded, -40, 135, 0, 15, 1);
-<<<<<<< HEAD
+
             Bitmap image = hough_visualization(segments, thresholded);
             List<(int, int)> line_list = new List<(int, int)>
             {
@@ -103,9 +103,6 @@ namespace INFOIBV
                 (0, 45)
             };
             List<(int, int)> crossing_points = hough_crossing_line(line_list, thresholded);
-=======
-            Image final_image = (Image)hough_visualization(segments, thresholded);
->>>>>>> 531d000578639176662c9579a46acb1c26fc38d3
 
             hough_visualize_crossing(crossing_points, ref image);
 
