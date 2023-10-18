@@ -172,18 +172,22 @@ namespace INFOIBV
 
 
             byte[,] g_scale_image = convertToGrayscale(Image);          // convert image to grayscale
-
+            /*
             byte[,] workingImage = dilateImage(g_scale_image, createStructuringElement(3, SEShape.Square), isBinary(g_scale_image));
-
+            */
             // copy array to output Bitmap
-            for (
 
-                int x = 0; x < workingImage.GetLength(0); x++)             // loop over columns
+            byte[,] workingImage = houghTransform(g_scale_image);
+            OutputImage = new Bitmap(501, 501);
+            Console.WriteLine(workingImage.GetLength(1));
+            for (int x = 0; x < workingImage.GetLength(0); x++)             // loop over columns
+            {
                 for (int y = 0; y < workingImage.GetLength(1); y++)         // loop over rows
                 {
                     Color newColor = Color.FromArgb(workingImage[x, y], workingImage[x, y], workingImage[x, y]);
                     OutputImage.SetPixel(x, y, newColor);                  // set the pixel color at coordinate (x,y)
                 }
+            }
 
             pictureBoxOut.Image = (Image)OutputImage;                         // display output image
         }
@@ -1594,6 +1598,48 @@ namespace INFOIBV
         {
             Square,
             Plus
+        }
+
+        /*
+         * houghTransform: a function that takes an image and returns the r-theta image that corresponds to it.
+         * input: inputImage        Single channel image.
+         * output                   Single channel image.
+         */
+        byte[,] houghTransform(byte[,] inputImage)
+        {
+            byte[,] newImg = thresholdImage(inputImage, 175);
+            int x_off = (int)(inputImage.GetLength(0) / 2), y_off = (int)(inputImage.GetLength(1)/2);
+            double maxR = Math.Sqrt((x_off * x_off) + (y_off * y_off));
+            byte[,] newImg2 = new byte[501,501];
+            for(int r = 0; r < newImg2.GetLength(0); r++)
+                for (int c = 0; c < newImg2.GetLength(1); c++)
+                {
+                    newImg2[r,c] = 0;
+                }
+
+            for (int r = 0; r < newImg.GetLength(0); r++)
+            {
+                for (int c = 0; c < newImg.GetLength(1); c++)
+                {
+                    if (newImg[r, c] != 0)
+                    {
+                        for (int t = 0; t <= 500; t++)
+                        {
+                            double T = t * Math.PI / 500;
+                            double R = (((r - x_off) * Math.Cos(T)) + ((c - y_off) * Math.Sin(T)));
+                            R += maxR;
+                            int r2 = (int)Math.Ceiling((R * 500 / (maxR * 2)));
+                            if (newImg2[t, r2] < 255)
+                            {
+                                newImg2[t, r2]++;
+                            }
+
+                        }
+                    }
+                }
+            }
+
+            return newImg2;
         }
     }
 
