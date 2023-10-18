@@ -95,6 +95,7 @@ namespace INFOIBV
             thresholded[152, 53] = 0;
 
             List<Segment> segments = hough_line_detection(thresholded, -40, 135, 0, 15, 1);
+<<<<<<< HEAD
             Bitmap image = hough_visualization(segments, thresholded);
             List<(int, int)> line_list = new List<(int, int)>
             {
@@ -102,6 +103,9 @@ namespace INFOIBV
                 (0, 45)
             };
             List<(int, int)> crossing_points = hough_crossing_line(line_list, thresholded);
+=======
+            Image final_image = (Image)hough_visualization(segments, thresholded);
+>>>>>>> 531d000578639176662c9579a46acb1c26fc38d3
 
             hough_visualize_crossing(crossing_points, ref image);
 
@@ -163,18 +167,22 @@ namespace INFOIBV
 
 
             byte[,] g_scale_image = convertToGrayscale(Image);          // convert image to grayscale
-
+            /*
             byte[,] workingImage = dilateImage(g_scale_image, createStructuringElement(3, SEShape.Square), isBinary(g_scale_image));
-
+            */
             // copy array to output Bitmap
-            for (
 
-                int x = 0; x < workingImage.GetLength(0); x++)             // loop over columns
+            byte[,] workingImage = houghTransform(g_scale_image);
+            OutputImage = new Bitmap(501, 501);
+            Console.WriteLine(workingImage.GetLength(1));
+            for (int x = 0; x < workingImage.GetLength(0); x++)             // loop over columns
+            {
                 for (int y = 0; y < workingImage.GetLength(1); y++)         // loop over rows
                 {
                     Color newColor = Color.FromArgb(workingImage[x, y], workingImage[x, y], workingImage[x, y]);
                     OutputImage.SetPixel(x, y, newColor);                  // set the pixel color at coordinate (x,y)
                 }
+            }
 
             pictureBoxOut.Image = (Image)OutputImage;                         // display output image
         }
@@ -1064,7 +1072,7 @@ namespace INFOIBV
                                 temp[x, y] = 0;
                                 break;
                             }
-                            
+
 
                         }
                         progressBar.PerformStep();
@@ -1093,7 +1101,7 @@ namespace INFOIBV
                             {
                                 tmp.Add(inputImage[x + cords[z].Item1, y + cords[z].Item2]);
                             }
-                            
+
                         }
                         temp[x, y] = tmp.AsQueryable().Min();
                         progressBar.PerformStep();
@@ -1157,7 +1165,7 @@ namespace INFOIBV
                                 continue;
                             }
                             else temp[x + cords[z].Item1, y + cords[z].Item2] = 255;
-                            
+
                         }
                         progressBar.PerformStep();
                     }
@@ -1263,9 +1271,9 @@ namespace INFOIBV
 
             //using countvalues and then making the array not have any logged for value 0 so the most common value, or the value 
             //of the largest object can be found and logged.
-            (byte ammo, List<int> hist)  = countValues(labels);
+            (byte ammo, List<int> hist) = countValues(labels);
             hist[0] = 0;
-            byte counter = (byte) hist.IndexOf(hist.Max());
+            byte counter = (byte)hist.IndexOf(hist.Max());
             byte[,] temp = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
 
 
@@ -1570,10 +1578,10 @@ namespace INFOIBV
         List<Segment> hough_line_detection(byte[,] inputImage, int radius, int theta, int minimum_intensity_threshold, int minimum_lenght, int maximum_gap)
         {
             List<Segment> segment_list = new List<Segment>();
-            HashSet<(int, int)> pixels_in_line_set = new HashSet<(int, int)> ();
+            HashSet<(int, int)> pixels_in_line_set = new HashSet<(int, int)>();
             bool binary = isBinary(inputImage);
 
-            (int c, int r) image_center = (inputImage.GetLength(0) /2 , inputImage.GetLength(1) /2 );
+            (int c, int r) image_center = (inputImage.GetLength(0) / 2, inputImage.GetLength(1) / 2);
             double cos_theta = Math.Cos(degree_to_rad(theta));
             double sen_theta = Math.Sin(degree_to_rad(theta));
 
@@ -1583,8 +1591,8 @@ namespace INFOIBV
 
 
             (double x, double y) = math_starting_point;
-            double x_increment = HOUGH_STEP * Math.Cos (degree_to_rad(alpha));
-            double y_increment = HOUGH_STEP * Math.Sin (degree_to_rad(alpha));
+            double x_increment = HOUGH_STEP * Math.Cos(degree_to_rad(alpha));
+            double y_increment = HOUGH_STEP * Math.Sin(degree_to_rad(alpha));
             int strikes = 0;
             while (true)
             {
@@ -1599,12 +1607,12 @@ namespace INFOIBV
                     continue;
                 }
 
-                pixels_in_line_set.Add(math_to_image(image_center, ((int)x, (int)(y < 0 ? y : y+1)))) ;
+                pixels_in_line_set.Add(math_to_image(image_center, ((int)x, (int)(y < 0 ? y : y + 1))));
                 //Console.WriteLine((x ,y));
                 x += x_increment;
                 y += y_increment;
             }
-            
+
             List<(int, int)> pixels_in_line_list = pixels_in_line_set.ToList();
             pixels_in_line_list.Sort();
 
@@ -1633,8 +1641,9 @@ namespace INFOIBV
                         seg_cont++;
                         gap_cont = 0;
                     }
-                    
-                } else
+
+                }
+                else
                 {       //pixel off
                     if (!tracking_state) continue; // keep looking
                     else if (++gap_cont >= maximum_gap)
@@ -1647,7 +1656,7 @@ namespace INFOIBV
                         new_segment.set_start(line_pixel);
                         continue;
                     }
-                    
+
                 }
             }
             if (tracking_state && seg_cont > minimum_lenght) segment_list.Add(new_segment);
@@ -1682,7 +1691,7 @@ namespace INFOIBV
                 }
 
 
-            foreach(Segment segment in segments)
+            foreach (Segment segment in segments)
             {
                 double x_diff = segment.end.c - segment.start.c;
                 double y_diff = segment.end.r - segment.start.r;
@@ -1700,7 +1709,7 @@ namespace INFOIBV
                     x += x_increment;
                     y += y_increment;
                 }
-                
+
             }
             return res;
         }
@@ -1769,6 +1778,50 @@ namespace INFOIBV
             Square,
             Plus
         }
+
+        /*
+         * houghTransform: a function that takes an image and returns the r-theta image that corresponds to it.
+         * input: inputImage        Single channel image.
+         * output                   Single channel image.
+         */
+        byte[,] houghTransform(byte[,] inputImage)
+        {
+            byte[,] newImg = thresholdImage(inputImage, 175);
+            int x_off = (int)(inputImage.GetLength(0) / 2), y_off = (int)(inputImage.GetLength(1) / 2);
+            double maxR = Math.Sqrt((x_off * x_off) + (y_off * y_off));
+            byte[,] newImg2 = new byte[501, 501];
+            for (int r = 0; r < newImg2.GetLength(0); r++)
+                for (int c = 0; c < newImg2.GetLength(1); c++)
+                {
+                    newImg2[r, c] = 0;
+                }
+
+            for (int r = 0; r < newImg.GetLength(0); r++)
+            {
+                for (int c = 0; c < newImg.GetLength(1); c++)
+                {
+                    if (newImg[r, c] != 0)
+                    {
+                        for (int t = 0; t <= 500; t++)
+                        {
+                            double T = t * Math.PI / 500;
+                            double R = (((r - x_off) * Math.Cos(T)) + ((c - y_off) * Math.Sin(T)));
+                            R += maxR;
+                            int r2 = (int)Math.Ceiling((R * 500 / (maxR * 2)));
+                            if (newImg2[t, r2] < 255)
+                            {
+                                newImg2[t, r2]++;
+                            }
+
+                        }
+                    }
+                }
+            }
+
+            return newImg2;
+        }
+
+
         public struct Segment
         {
             public (int c, int r) start;
@@ -1780,8 +1833,9 @@ namespace INFOIBV
             public void set_start((int, int) start)
             {
                 this.start = start;
+
             }
         }
-    }
 
+    }
 }
