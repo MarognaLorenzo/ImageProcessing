@@ -37,17 +37,17 @@
             this.saveButton = new System.Windows.Forms.Button();
             this.pictureBoxOut = new System.Windows.Forms.PictureBox();
             this.progressBar = new System.Windows.Forms.ProgressBar();
-            this.PipelineZbutton = new System.Windows.Forms.Button();
+            this.lineDetectionButton = new System.Windows.Forms.Button();
             this.DetectAreasButton = new System.Windows.Forms.Button();
             this.LargestObjectbutton = new System.Windows.Forms.Button();
             this.ErodeButton = new System.Windows.Forms.Button();
             this.DilateButton = new System.Windows.Forms.Button();
             this.LoadImage2Button = new System.Windows.Forms.Button();
             this.image2FileName = new System.Windows.Forms.TextBox();
-            this.PipelineEbutton = new System.Windows.Forms.Button();
+            this.OrButton = new System.Windows.Forms.Button();
             this.CountValuesButton = new System.Windows.Forms.Button();
             this.CountNonBGPixel = new System.Windows.Forms.Button();
-            this.PipelineGButton = new System.Windows.Forms.Button();
+            this.CloseButton = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBoxIn1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBoxIn2)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBoxOut)).BeginInit();
@@ -135,16 +135,16 @@
             this.progressBar.TabIndex = 6;
             this.progressBar.Visible = false;
             // 
-            // PipelineZbutton
+            // lineDetectionButton
             // 
-            this.PipelineZbutton.Location = new System.Drawing.Point(629, 98);
-            this.PipelineZbutton.Margin = new System.Windows.Forms.Padding(4);
-            this.PipelineZbutton.Name = "PipelineZbutton";
-            this.PipelineZbutton.Size = new System.Drawing.Size(132, 27);
-            this.PipelineZbutton.TabIndex = 7;
-            this.PipelineZbutton.Text = "And";
-            this.PipelineZbutton.UseVisualStyleBackColor = true;
-            this.PipelineZbutton.Click += new System.EventHandler(this.ClickAnd);
+            this.lineDetectionButton.Location = new System.Drawing.Point(629, 98);
+            this.lineDetectionButton.Margin = new System.Windows.Forms.Padding(4);
+            this.lineDetectionButton.Name = "lineDetectionButton";
+            this.lineDetectionButton.Size = new System.Drawing.Size(132, 27);
+            this.lineDetectionButton.TabIndex = 7;
+            this.lineDetectionButton.Text = "houge_line_detection";
+            this.lineDetectionButton.UseVisualStyleBackColor = true;
+            this.lineDetectionButton.Click += new System.EventHandler(this.houghLineDetectionClick);
             // 
             // DetectAreasButton
             // 
@@ -210,16 +210,16 @@
             this.image2FileName.Size = new System.Drawing.Size(420, 22);
             this.image2FileName.TabIndex = 13;
             // 
-            // PipelineEbutton
+            // OrButton
             // 
-            this.PipelineEbutton.Location = new System.Drawing.Point(769, 98);
-            this.PipelineEbutton.Margin = new System.Windows.Forms.Padding(4);
-            this.PipelineEbutton.Name = "PipelineEbutton";
-            this.PipelineEbutton.Size = new System.Drawing.Size(132, 27);
-            this.PipelineEbutton.TabIndex = 15;
-            this.PipelineEbutton.Text = "Or";
-            this.PipelineEbutton.UseVisualStyleBackColor = true;
-            this.PipelineEbutton.Click += new System.EventHandler(this.ClickOr);
+            this.OrButton.Location = new System.Drawing.Point(769, 98);
+            this.OrButton.Margin = new System.Windows.Forms.Padding(4);
+            this.OrButton.Name = "OrButton";
+            this.OrButton.Size = new System.Drawing.Size(132, 27);
+            this.OrButton.TabIndex = 15;
+            this.OrButton.Text = "Or";
+            this.OrButton.UseVisualStyleBackColor = true;
+            this.OrButton.Click += new System.EventHandler(this.ClickOr);
             // 
             // CountValuesButton
             // 
@@ -243,26 +243,26 @@
             this.CountNonBGPixel.UseVisualStyleBackColor = true;
             this.CountNonBGPixel.Click += new System.EventHandler(this.ClickOpen);
             // 
-            // PipelineGButton
+            // CloseButton
             // 
-            this.PipelineGButton.Location = new System.Drawing.Point(630, 128);
-            this.PipelineGButton.Margin = new System.Windows.Forms.Padding(4);
-            this.PipelineGButton.Name = "PipelineGButton";
-            this.PipelineGButton.Size = new System.Drawing.Size(132, 27);
-            this.PipelineGButton.TabIndex = 18;
-            this.PipelineGButton.Text = "Closing";
-            this.PipelineGButton.UseVisualStyleBackColor = true;
-            this.PipelineGButton.Click += new System.EventHandler(this.ClickClose);
+            this.CloseButton.Location = new System.Drawing.Point(630, 128);
+            this.CloseButton.Margin = new System.Windows.Forms.Padding(4);
+            this.CloseButton.Name = "CloseButton";
+            this.CloseButton.Size = new System.Drawing.Size(132, 27);
+            this.CloseButton.TabIndex = 18;
+            this.CloseButton.Text = "Closing";
+            this.CloseButton.UseVisualStyleBackColor = true;
+            this.CloseButton.Click += new System.EventHandler(this.ClickClose);
             // 
             // INFOIBV
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1924, 1053);
-            this.Controls.Add(this.PipelineGButton);
+            this.Controls.Add(this.CloseButton);
             this.Controls.Add(this.CountNonBGPixel);
             this.Controls.Add(this.CountValuesButton);
-            this.Controls.Add(this.PipelineEbutton);
+            this.Controls.Add(this.OrButton);
             this.Controls.Add(this.image2FileName);
             this.Controls.Add(this.LoadImageButton);
             this.Controls.Add(this.LoadImage2Button);
@@ -270,7 +270,7 @@
             this.Controls.Add(this.ErodeButton);
             this.Controls.Add(this.LargestObjectbutton);
             this.Controls.Add(this.DetectAreasButton);
-            this.Controls.Add(this.PipelineZbutton);
+            this.Controls.Add(this.lineDetectionButton);
             this.Controls.Add(this.progressBar);
             this.Controls.Add(this.pictureBoxOut);
             this.Controls.Add(this.saveButton);
@@ -303,16 +303,16 @@
         private System.Windows.Forms.Button saveButton;
         private System.Windows.Forms.PictureBox pictureBoxOut;
         private System.Windows.Forms.ProgressBar progressBar;
-        private System.Windows.Forms.Button PipelineZbutton;
+        private System.Windows.Forms.Button lineDetectionButton;
         private System.Windows.Forms.Button DetectAreasButton;
         private System.Windows.Forms.Button LargestObjectbutton;
         private System.Windows.Forms.Button ErodeButton;
         private System.Windows.Forms.Button DilateButton;
         private System.Windows.Forms.TextBox image2FileName;
-        private System.Windows.Forms.Button PipelineEbutton;
+        private System.Windows.Forms.Button OrButton;
         private System.Windows.Forms.Button CountValuesButton;
         private System.Windows.Forms.Button CountNonBGPixel;
-        private System.Windows.Forms.Button PipelineGButton;
+        private System.Windows.Forms.Button CloseButton;
     }
 }
 
