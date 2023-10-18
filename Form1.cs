@@ -95,23 +95,18 @@ namespace INFOIBV
             thresholded[152, 53] = 0;
 
             List<Segment> segments = hough_line_detection(thresholded, -40, 135, 0, 15, 1);
-            Image final_image = (Image) hough_visualization(segments, thresholded);
+            Bitmap image = hough_visualization(segments, thresholded);
+            List<(int, int)> line_list = new List<(int, int)>
+            {
+                (-40, 135),
+                (0, 45)
+            };
+            List<(int, int)> crossing_points = hough_crossing_line(line_list, thresholded);
 
-            pictureBoxOut.Image = final_image;
+            hough_visualize_crossing(crossing_points, ref image);
 
-            //byte[,] workingImage = thresholdImage(thresholded, 127);
+            pictureBoxOut.Image = (Image) image;
 
-            //// copy array to output Bitmap
-            //for (
-
-            //    int x = 0; x < workingImage.GetLength(0); x++)             // loop over columns
-            //    for (int y = 0; y < workingImage.GetLength(1); y++)         // loop over rows
-            //    {
-            //        Color newColor = Color.FromArgb(workingImage[x, y], workingImage[x, y], workingImage[x, y]);
-            //        OutputImage.SetPixel(x, y, newColor);                  // set the pixel color at coordinate (x,y)
-            //    }
-
-            //pictureBoxOut.Image = (Image)OutputImage;                         // display output image
         }
 
         /*
@@ -1708,6 +1703,63 @@ namespace INFOIBV
                 
             }
             return res;
+        }
+
+
+        /*
+        * hough_crossing_line: takes as input a single channel image and a list of lines and give back a list of pairs (c, r) of crossing points
+        * input:   inputImage                       single channel  image
+        *          r-theta pairs                    list of detected r   
+        * output:                                   A List with the coords of crossing points of different lines
+        */
+        List<(int, int)> hough_crossing_line(List<(int, int)> lines, byte[,] inputImage)
+        {
+            (int c, int r) image_center = (inputImage.GetLength(0) / 2, inputImage.GetLength(1) / 2);
+            List<(int c, int r)> res = new List<(int, int)>();
+
+            for (int i = 0; i < lines.Count; i++)
+            { 
+                (int r, int theta) line1 = lines[i];
+                for(int j = i+1 ; j < lines.Count; j++)
+                {
+                    (int r, int theta) line2 = lines[j];
+                    if (line1.theta == line2.theta) continue;
+
+                    // Detect crossing point
+                    double cos1 = Math.Cos(line1.theta);
+                    double cos2 = Math.Cos(line2.theta);
+                    double sin1 = Math.Sin(line1.theta);
+                    double sin2 = Math.Sin(line2.theta);
+                    int r1 = line1.r;
+                    int r2 = line2.r;
+
+                    double x = ((r2 / sin2)-(r1 / sin1)) * (1 / ((cos2 / sin2)-(cos1 / sin1)));
+                    double y = (r1 - x * cos1) / sin1;
+
+                    (int c, int r) pixel_coord = math_to_image(image_center, ((int) x, (int) y));
+                    if (pixel_coord.c < 0 || pixel_coord.c >= inputImage.GetLength(0) || pixel_coord.r < 0 || pixel_coord.r >= inputImage.GetLength(1)) continue;
+
+                    res.Add(pixel_coord);
+
+                }
+            }
+
+            return res;
+
+        }
+
+        void hough_visualize_crossing(List<(int c, int r)> crossing_coords, ref Bitmap inputImage)
+        {
+            foreach((int c, int r) point in crossing_coords)
+            {
+                if (point.c < 0 || point.c >= inputImage.Width || point.r < 0 || point.r >= inputImage.Height) continue;
+
+                inputImage.SetPixel(point.c, point.r, Color.Green);
+                if (point.c + 1 < inputImage.Width) inputImage.SetPixel(point.c + 1, point.r, Color.Green);
+                if (point.c - 1 >= 0) inputImage.SetPixel(point.c - 1, point.r, Color.Green);
+                if (point.r + 1 < inputImage.Height) inputImage.SetPixel(point.c, point.r +1 , Color.Green);
+                if (point.r - 1 >= 0) inputImage.SetPixel(point.c, point.r -1 , Color.Green);
+            }
         }
 
 
