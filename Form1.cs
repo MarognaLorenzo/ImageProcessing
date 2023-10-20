@@ -11,7 +11,7 @@ namespace INFOIBV
         private Bitmap InputImage1;
         private Bitmap InputImage2;
         private Bitmap OutputImage;
-        private const double HOUGH_STEP = 0.4;
+        private const double HOUGH_STEP = 0.1;
         private sbyte[,] vPrewittfilter = new sbyte[3, 3] { { -1, -1, -1 },
                                              {  0 , 0,  0 },
                                              {  1,  1,  1 } };
@@ -91,22 +91,41 @@ namespace INFOIBV
 
             byte[,] thresholded = thresholdImage(g_scale_image, 127);
 
-            thresholded[113, 93] = 0; // just for testing on line2 image
-            thresholded[152, 53] = 0;
+            byte[,] workingImage = thresholded;
+            // copy array to output Bitmap
+            List<(int, int)> lines = new List<(int, int)> { (40, 135), (0,45), (30, 0)};
 
-            List<Segment> segments = hough_line_detection(thresholded, -40, 135, 0, 15, 1);
-
-            Bitmap image = hough_visualization(segments, thresholded);
-            List<(int, int)> line_list = new List<(int, int)>
+            List<List<Segment>> segments = new List<List<Segment>>();
+            List<List<(int, int)>> pixel_in_lines = new List<List<(int, int)>> ();
+            foreach(var line in lines)
             {
-                (-40, 135),
-                (0, 45)
-            };
-            List<(int, int)> crossing_points = hough_crossing_line(line_list, thresholded);
+                (List<Segment> segmentsToAdd, List<(int,int)> pixels_on_line) = hough_line_detection(workingImage, line.Item1, line.Item2, 127, 30, 5);
+                segments.Add(segmentsToAdd);
+                pixel_in_lines.Add(pixels_on_line);
+            }
 
-            hough_visualize_crossing(crossing_points, ref image);
+            List<(int, int)> crossing_coords = hough_crossing_line(lines, workingImage);
 
-            pictureBoxOut.Image = (Image) image;
+            // copy array to output Bitmap
+            for (
+
+                int x = 0; x < workingImage.GetLength(0); x++)             // loop over columns
+                for (int y = 0; y < workingImage.GetLength(1); y++)         // loop over rows
+                {
+                    Color newColor = Color.FromArgb(workingImage[x, y], workingImage[x, y], workingImage[x, y]);
+                    OutputImage.SetPixel(x, y, newColor);                  // set the pixel color at coordinate (x,y)
+                }
+            for(int i =0; i < segments.Count; i++)
+                hough_visualization(segments[i], ref OutputImage, pixel_in_lines[i]);
+
+            hough_visualize_crossing(crossing_coords, ref OutputImage);
+
+            for (int c = 0; c < OutputImage.Width; c++)
+                OutputImage.SetPixel(c, OutputImage.Height / 2, Color.Coral);
+            for (int r = 0; r < OutputImage.Height; r++)
+                OutputImage.SetPixel(OutputImage.Width /2, r, Color.Coral);
+
+            pictureBoxOut.Image = (Image)OutputImage;                         // display output image
 
         }
 
@@ -1551,7 +1570,7 @@ namespace INFOIBV
         //that takes an image and a (r, theta)-pair 
         //(from the Hough peak finding function), a minimum intensity
         //threshold (for grayscale images), a minimum length parameter
-        //and a maximum gap parameter, and outputs a list of line segments.
+        //and a maximum gap parameter, and outputs a list of line segmentsToAdd.
         //A segment is a series of adjacent pixels that are "on" (foreground
         //in case of a binary image and above the minimum intensity threshold
         //for grayscale images). Each segment corresponds to the (r, theta)-pair and is 
@@ -1569,10 +1588,10 @@ namespace INFOIBV
         *          minimum_intensity_threshold      
         *          minimum_lengh                    
         *          maximum_gap                      
-        * output:                                   list of line segments
+        * output:                                   list of line segmentsToAdd
         */
 
-        List<Segment> hough_line_detection(byte[,] inputImage, int radius, int theta, int minimum_intensity_threshold, int minimum_lenght, int maximum_gap)
+        ( List<Segment>, List<(int, int)> pixel_to_check)  hough_line_detection(byte[,] inputImage, int radius, int theta, int minimum_intensity_threshold, int minimum_lenght, int maximum_gap)
         {
             List<Segment> segment_list = new List<Segment>();
             HashSet<(int, int)> pixels_in_line_set = new HashSet<(int, int)>();
@@ -1658,7 +1677,7 @@ namespace INFOIBV
             }
             if (tracking_state && seg_cont > minimum_lenght) segment_list.Add(new_segment);
 
-            return segment_list;
+            return (segment_list, pixels_in_line_list);
         }
 
         double degree_to_rad(double degree)
@@ -1675,44 +1694,36 @@ namespace INFOIBV
         }
 
         /*
-        * hough_visualization: takes as input a single channel image and a list of detected segments and colors in red the segment in a bitmap
+        * hough_visualization: takes as input a single channel image and a list of detected segmentsToAdd and colors in red the segment in a bitmap
         * input:   inputImage                       single channel  image
-        *          segments                         the list of detected segments          
-        * output:                                   Bitmap with red segments on it
+        *          segmentsToAdd                         the list of detected segmentsToAdd          
+        * output:                                   Bitmap with red segmentsToAdd on it
         */
 
-        Bitmap hough_visualization(List<Segment> segments, byte[,] inputImage)
+        void hough_visualization(List<Segment> segments, ref Bitmap inputImage, List<(int, int)> pixel_in_line)
         {
-            Bitmap res = new Bitmap(inputImage.GetLength(0), inputImage.GetLength(1));
-            for (int x = 0; x < inputImage.GetLength(0); x++)             // loop over columns
-                for (int y = 0; y < inputImage.GetLength(1); y++)         // loop over rows
-                {
-                    Color newColor = Color.FromArgb(inputImage[x, y], inputImage[x, y], inputImage[x, y]);
-                    res.SetPixel(x, y, newColor);                  // set the pixel color at coordinate (x,y)
-                }
+            //foreach (Segment segment in segments)
+            //{
+            //    double x_diff = segment.end.c - segment.start.c;
+            //    double y_diff = segment.end.r - segment.start.r;
+            //    double alpha = Math.Atan(y_diff / x_diff);
 
+            //    double x_increment = HOUGH_STEP * Math.Cos(alpha);
+            //    double y_increment = HOUGH_STEP * Math.Sin(alpha);
 
-            foreach (Segment segment in segments)
-            {
-                double x_diff = segment.end.c - segment.start.c;
-                double y_diff = segment.end.r - segment.start.r;
-                double alpha = Math.Atan(y_diff / x_diff);
+            //    double x = segment.start.c;
+            //    double y = segment.start.r;
 
-                double x_increment = HOUGH_STEP * Math.Cos(alpha);
-                double y_increment = HOUGH_STEP * Math.Sin(alpha);
+            //    while (x <= segment.end.c)
+            //    {
+            //        inputImage.SetPixel((int)x, (int)y, Color.Red);
+            //        x += x_increment;
+            //        y += y_increment;
+            //    }
 
-                double x = segment.start.c;
-                double y = segment.start.r;
-
-                while (x <= segment.end.c)
-                {
-                    res.SetPixel((int)x, (int)y, Color.Red);
-                    x += x_increment;
-                    y += y_increment;
-                }
-
-            }
-            return res;
+            //}
+            foreach (var pixel in pixel_in_line)
+                inputImage.SetPixel(pixel.Item1, pixel.Item2, Color.Red);
         }
 
 
@@ -1736,17 +1747,33 @@ namespace INFOIBV
                     if (line1.theta == line2.theta) continue;
 
                     // Detect crossing point
-                    double cos1 = Math.Cos(line1.theta);
-                    double cos2 = Math.Cos(line2.theta);
-                    double sin1 = Math.Sin(line1.theta);
-                    double sin2 = Math.Sin(line2.theta);
+                    double cos1 = Math.Cos(degree_to_rad(line1.theta));
+                    double cos2 = Math.Cos(degree_to_rad(line2.theta));
+                    double sin1 = Math.Sin(degree_to_rad(line1.theta));
+                    double sin2 = Math.Sin(degree_to_rad(line2.theta));
                     int r1 = line1.r;
                     int r2 = line2.r;
 
-                    double x = ((r2 / sin2)-(r1 / sin1)) * (1 / ((cos2 / sin2)-(cos1 / sin1)));
-                    double y = (r1 - x * cos1) / sin1;
+                    double x;
+                    double y;
+                    if (sin1 != 0 && sin2 != 0)
+                    {
+                        x = ((r2 / sin2)-(r1 / sin1)) / ((cos2 / sin2)-(cos1 / sin1));
+                        y = (r1 - x * cos1) / sin1;
+                    } else
+                    { 
+                        if(sin1 == 0)
+                        {
+                            x = r1;
+                            y = (r2 - x * cos2) / sin2;
+                        } else
+                        {
+                            x = r2;
+                            y = (r1 - x * cos1) / sin1;
+                        }
+                    }
 
-                    (int c, int r) pixel_coord = math_to_image(image_center, ((int) x, (int) y));
+                    (int c, int r) pixel_coord = math_to_image(image_center, ((int) x, (int)(y < 0 ? y : y + 1)));
                     if (pixel_coord.c < 0 || pixel_coord.c >= inputImage.GetLength(0) || pixel_coord.r < 0 || pixel_coord.r >= inputImage.GetLength(1)) continue;
 
                     res.Add(pixel_coord);
