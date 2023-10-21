@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
+using System.Net.Sockets;
 using System.Windows.Forms;
 
 namespace INFOIBV
@@ -99,7 +100,7 @@ namespace INFOIBV
             List<List<(int, int)>> pixel_in_lines = new List<List<(int, int)>> ();
             foreach(var line in lines)
             {
-                (List<Segment> segmentsToAdd, List<(int,int)> pixels_on_line) = hough_line_detection(workingImage, line.Item1, line.Item2, 127, 30, 5);
+                (List<Segment> segmentsToAdd, List<(int,int)> pixels_on_line) = hough_line_detection(workingImage, line.Item1, line.Item2, 127, 10, 5);
                 segments.Add(segmentsToAdd);
                 pixel_in_lines.Add(pixels_on_line);
             }
@@ -169,11 +170,10 @@ namespace INFOIBV
             pictureBoxOut.Image = (Image)OutputImage;                         // display output image                         // display output image
         }
 
-        private void ClickDilateButton(object sender, EventArgs e)
+        private void houghTransformClick(object sender, EventArgs e)
         {
             if (InputImage1 == null) return;                                 // get out if no input image
             if (OutputImage != null) OutputImage.Dispose();                 // reset output image
-            OutputImage = new Bitmap(InputImage1.Size.Width, InputImage1.Size.Height); // create new output image
             Color[,] Image = new Color[InputImage1.Size.Width, InputImage1.Size.Height]; // create array to speed-up operations (Bitmap functions are very slow)
 
             // copy input Bitmap to array            
@@ -183,43 +183,11 @@ namespace INFOIBV
 
 
             byte[,] g_scale_image = convertToGrayscale(Image);          // convert image to grayscale
-            /*
-            byte[,] workingImage = dilateImage(g_scale_image, createStructuringElement(3, SEShape.Square), isBinary(g_scale_image));
-            */
+
             // copy array to output Bitmap
 
-            byte[,] workingImage = houghAngleLimit(g_scale_image, 0, 90);
-            OutputImage = new Bitmap(501, 501);
-            Console.WriteLine(workingImage.GetLength(1));
-            for (int x = 0; x < workingImage.GetLength(0); x++)             // loop over columns
-            {
-                for (int y = 0; y < workingImage.GetLength(1); y++)         // loop over rows
-                {
-                    Color newColor = Color.FromArgb(workingImage[x, y], workingImage[x, y], workingImage[x, y]);
-                    OutputImage.SetPixel(x, y, newColor);                  // set the pixel color at coordinate (x,y)
-                }
-            }
-
-            pictureBoxOut.Image = (Image)OutputImage;                         // display output image
-        }
-
-        private void ClickErodeButton(object sender, EventArgs e)
-        {
-            if (InputImage1 == null) return;                                 // get out if no input image
-            if (OutputImage != null) OutputImage.Dispose();                 // reset output image
-            OutputImage = new Bitmap(InputImage1.Size.Width, InputImage1.Size.Height); // create new output image
-            Color[,] Image = new Color[InputImage1.Size.Width, InputImage1.Size.Height]; // create array to speed-up operations (Bitmap functions are very slow)
-
-            // copy input Bitmap to array            
-            for (int x = 0; x < InputImage1.Size.Width; x++)                 // loop over columns
-                for (int y = 0; y < InputImage1.Size.Height; y++)            // loop over rows
-                    Image[x, y] = InputImage1.GetPixel(x, y);                // set pixel color in array at (x,y)
-
-
-            byte[,] g_scale_image = convertToGrayscale(Image);          // convert image to grayscale
-
-            byte[,] workingImage = erodeImage(g_scale_image, createStructuringElement(3, SEShape.Square), isBinary(g_scale_image));
-
+            byte[,] workingImage = adjustContrast(houghTransform(g_scale_image));
+            OutputImage = new Bitmap(workingImage.GetLength(0),workingImage.GetLength(1)); // create new output image
 
             // copy array to output Bitmap
             for (
@@ -230,6 +198,95 @@ namespace INFOIBV
                     Color newColor = Color.FromArgb(workingImage[x, y], workingImage[x, y], workingImage[x, y]);
                     OutputImage.SetPixel(x, y, newColor);                  // set the pixel color at coordinate (x,y)
                 }
+
+            pictureBoxOut.Image = (Image)OutputImage;                         // display output image
+
+        }
+
+        private void detectLineClick(object sender, EventArgs e)
+        {
+            if (InputImage1 == null) return;                                 // get out if no input image
+            if (OutputImage != null) OutputImage.Dispose();                 // reset output image
+            Color[,] Image = new Color[InputImage1.Size.Width, InputImage1.Size.Height]; // create array to speed-up operations (Bitmap functions are very slow)
+
+            // copy input Bitmap to array            
+            for (int x = 0; x < InputImage1.Size.Width; x++)                 // loop over columns
+                for (int y = 0; y < InputImage1.Size.Height; y++)            // loop over rows
+                    Image[x, y] = InputImage1.GetPixel(x, y);                // set pixel color in array at (x,y)
+
+
+            byte[,] g_scale_image = convertToGrayscale(Image);          // convert image to grayscale
+            int[,] transf = houghTransform(g_scale_image);
+            byte[,] contrast = adjustContrast(transf);
+            byte[,] thresholded = thresholdImage(contrast, 120);
+            byte[,] close = closeImage(thresholded, createStructuringElement(9, SEShape.Square), isBinary(thresholded));
+            byte[,] flood = floodFill(close);
+            int[] count = new int[1000];
+            int[] sumx = new int[1000];
+            int[] sumy = new int[1000];
+            for (int c = 0; c < flood.GetLength(0); c++)
+                for (int r = 0; r < flood.GetLength(1); r++)
+                {
+                    int num = flood[c, r];
+                    count[num]++;
+                    sumx[num] += c;
+                    sumy[num] += r;
+                }
+            (double cx, double cy)[] avg = new (double, double)[100];
+            List<(int, int)> lines = new List<(int, int)>();
+            double maxR = Math.Sqrt(Math.Pow(g_scale_image.GetLength(0), 2) + Math.Pow(g_scale_image.GetLength(1), 2));
+            for (int i = 1; i < 100; i++)
+            {
+                avg[i] = ((double)sumx[i] / count[i], (double)sumy[i] / count[i]);
+                if (count[i] > 0)
+                {
+                    //Console.WriteLine(avg[i] + "  " + count[i]);
+                    double T = avg[i].cx * 180 / 500;
+                    double R = (avg[i].cy * maxR / 500) - maxR / 2;
+                    Console.WriteLine("R:" + R + " - T: " + T + "count:" + count[i]);
+                    lines.Add(((int)R, (int)T));
+                }
+            }
+
+            byte[,] workingImage = g_scale_image;
+
+            List<List<Segment>> segments = new List<List<Segment>>();
+            List<List<(int, int)>> pixel_in_lines = new List<List<(int, int)>>();
+
+            foreach ((int r, int theta) line in lines)
+            {
+                (List<Segment> segmentsToAdd, List<(int, int)> pixels_on_line) = hough_line_detection(workingImage, line.r, line.theta, 127, 10, 5);
+                segments.Add(segmentsToAdd);
+                pixel_in_lines.Add(pixels_on_line);
+            }
+
+            List<(int, int)> crossing_coords = hough_crossing_line(lines, workingImage);
+
+
+            OutputImage = new Bitmap(workingImage.GetLength(0) , workingImage.GetLength(1) ); // create new output image
+
+            // copy array to output Bitmap
+            for (
+
+                int x = 0; x < workingImage.GetLength(0); x++)             // loop over columns
+                for (int y = 0; y < workingImage.GetLength(1); y++)         // loop over rows
+                {
+                    Color newColor = Color.FromArgb(workingImage[x, y], workingImage[x, y], workingImage[x, y]);
+                    OutputImage.SetPixel(x, y, newColor);                  // set the pixel color at coordinate (x,y)
+                }
+
+            // VISUALIZE RED LINES
+            for (int i = 0; i < segments.Count; i++)
+                hough_visualization(segments[i], ref OutputImage, pixel_in_lines[i]);
+
+            //VISUALIZE GREEN DOTS
+            hough_visualize_crossing(crossing_coords, ref OutputImage);
+
+            // VISUALIZE AXIS
+            for (int c = 0; c < OutputImage.Width; c++)
+                OutputImage.SetPixel(c, OutputImage.Height / 2, Color.Coral);
+            for (int r = 0; r < OutputImage.Height; r++)
+                OutputImage.SetPixel(OutputImage.Width / 2, r, Color.Coral);
 
             pictureBoxOut.Image = (Image)OutputImage;                         // display output image
         }
@@ -508,8 +565,8 @@ namespace INFOIBV
 
             int[] histogram = new int[256];
             for (int a = 0; a < histogram.Length; a++) histogram[a] = 0;
-            for (int x = 0; x < InputImage1.Size.Width; x++)                 // loop over columns
-                for (int y = 0; y < InputImage1.Size.Height; y++)            // loop over rows
+            for (int x = 0; x < inputImage.GetLength(0); x++)                 // loop over columns
+                for (int y = 0; y < inputImage.GetLength(1); y++)            // loop over rows
                     histogram[inputImage[x, y]]++;
 
             // Calculating actual contrast
@@ -521,27 +578,82 @@ namespace INFOIBV
             // setup progress bar
             progressBar.Visible = true;
             progressBar.Minimum = 1;
-            progressBar.Maximum = InputImage1.Size.Width * InputImage1.Size.Height;
+            progressBar.Maximum = inputImage.GetLength(0) * inputImage.GetLength(1);
             progressBar.Value = 1;
             progressBar.Step = 1;
 
             // process all pixels in the image
-            for (int x = 0; x < InputImage1.Size.Width; x++)                 // loop over columns
-                for (int y = 0; y < InputImage1.Size.Height; y++)            // loop over rows
+            for (int x = 0; x < inputImage.GetLength(0); x++)                 // loop over columns
+                for (int y = 0; y < inputImage.GetLength(1); y++)            // loop over rows
                 {
                     // get pixel color
                     tempImage[x, y] = (byte)((inputImage[x, y] - lower_bound) * ((float)255 / (float)(upper_bound - lower_bound)));
                     progressBar.PerformStep();                              // increment progress bar
                 }
             for (int a = 0; a < histogram.Length; a++) histogram[a] = 0;
-            for (int x = 0; x < InputImage1.Size.Width; x++)                 // loop over columns
-                for (int y = 0; y < InputImage1.Size.Height; y++)            // loop over rows
+            for (int x = 0; x < inputImage.GetLength(0); x++)                 // loop over columns
+                for (int y = 0; y < inputImage.GetLength(1); y++)            // loop over rows
                     histogram[tempImage[x, y]]++;
             progressBar.Visible = false;
 
             return tempImage;
         }
 
+        /*
+ * adjustContrast: create an image with the full range of intensity values used
+ * input:   inputImage          single-channel (byte) image
+ * output:                      single-channel (byte) image
+ */
+        private byte[,] adjustContrast(int[,] inputImage)
+        {
+            // create temporary grayscale image
+            byte[,] tempImage = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
+
+            int max_value = 0;
+            for (int x = 0; x < inputImage.GetLength(0); x++)
+                for (int y = 0; y < inputImage.GetLength(1); y++)
+                {
+                    max_value = Math.Max(max_value, inputImage[x, y]);
+                }
+            max_value++;
+
+
+            // Calculating the histogram
+
+            int[] histogram = new int[max_value];
+            for (int a = 0; a < histogram.Length; a++) histogram[a] = 0;
+            for (int x = 0; x < inputImage.GetLength(0); x++)                 // loop over columns
+                for (int y = 0; y < inputImage.GetLength(1); y++)            // loop over rows
+                    histogram[inputImage[x, y]]++;
+
+            // Calculating actual contrast
+            int lower_bound = 0;
+            while (histogram[lower_bound] == 0 && lower_bound < max_value) lower_bound++;
+            int upper_bound = max_value;
+
+            // setup progress bar
+            progressBar.Visible = true;
+            progressBar.Minimum = 1;
+            progressBar.Maximum = inputImage.GetLength(0) * inputImage.GetLength(1);
+            progressBar.Value = 1;
+            progressBar.Step = 1;
+
+            // process all pixels in the image
+            for (int x = 0; x < inputImage.GetLength(0); x++)                 // loop over columns
+                for (int y = 0; y < inputImage.GetLength(1); y++)            // loop over rows
+                {
+                    // get pixel color
+                    tempImage[x, y] = (byte)((inputImage[x, y] - lower_bound) * ((float)256 / (float)(upper_bound - lower_bound)));
+                    progressBar.PerformStep();                              // increment progress bar
+                }
+            for (int a = 0; a < histogram.Length; a++) histogram[a] = 0;
+            for (int x = 0; x < inputImage.GetLength(0); x++)                 // loop over columns
+                for (int y = 0; y < inputImage.GetLength(1); y++)            // loop over rows
+                    histogram[tempImage[x, y]]++;
+            progressBar.Visible = false;
+
+            return tempImage;
+        }
 
         /*
          * createGaussianFilter: create a Gaussian filter of specific square size and with a specified sigma
@@ -935,13 +1047,13 @@ namespace INFOIBV
             // setup progress bar
             progressBar.Visible = true;
             progressBar.Minimum = 1;
-            progressBar.Maximum = InputImage1.Size.Width * InputImage1.Size.Height;
+            progressBar.Maximum = inputImage.GetLength(0) * inputImage.GetLength(1);
             progressBar.Value = 1;
             progressBar.Step = 1;
 
             // process all pixels in the image
-            for (int x = 0; x < InputImage1.Size.Width; x++)                 // loop over columns
-                for (int y = 0; y < InputImage1.Size.Height; y++)            // loop over rows
+            for (int x = 0; x < inputImage.GetLength(0); x++)                 // loop over columns
+                for (int y = 0; y < inputImage.GetLength(1); y++)            // loop over rows
                 {
                     // get pixel color
                     tempImage[x, y] = (byte)(inputImage[x, y] >= th ? 255 : 0);
@@ -1066,8 +1178,6 @@ namespace INFOIBV
             //A check on if the image is binairy and followup on what to do in both cases.
             if (binary)
             {
-                // Eroding the image using a double forloop.
-                if (!isBinary(inputImage)) throw new Exception("Image is not binary");
                 for (int x = 0; x < inputImage.GetLength(0); x++)
                     for (int y = 0; y < inputImage.GetLength(1); y++)
                     {
@@ -1560,26 +1670,6 @@ namespace INFOIBV
             return true;
         }
 
-
-        // ====================================================================
-        // ============= YOUR FUNCTIONS FOR ASSIGNMENT 3 GO HERE ==============
-        // ====================================================================
-
-
-        //implement a function (houghLineDetection)
-        //that takes an image and a (r, theta)-pair 
-        //(from the Hough peak finding function), a minimum intensity
-        //threshold (for grayscale images), a minimum length parameter
-        //and a maximum gap parameter, and outputs a list of line segmentsToAdd.
-        //A segment is a series of adjacent pixels that are "on" (foreground
-        //in case of a binary image and above the minimum intensity threshold
-        //for grayscale images). Each segment corresponds to the (r, theta)-pair and is 
-        //at least as long as the minimum length parameter
-        //prescribes. Each segment is described as start/end (x,y)-coordinates. . The maximum gap
-        //parameter determines how many subsequent pixels can be background, and still be considered part of the segment
-
-
-
         /*
         * hough_line_detection: takes as input a single channel image and return true only if all values of the image are either 0 or 255
         * input:   inputImage                       single channel  image
@@ -1700,30 +1790,38 @@ namespace INFOIBV
         * output:                                   Bitmap with red segmentsToAdd on it
         */
 
-        void hough_visualization(List<Segment> segments, ref Bitmap inputImage, List<(int, int)> pixel_in_line)
+        void hough_visualization(List<Segment> segments, ref Bitmap inputImage, List<(int c, int r)> pixel_in_line)
         {
-            //foreach (Segment segment in segments)
-            //{
-            //    double x_diff = segment.end.c - segment.start.c;
-            //    double y_diff = segment.end.r - segment.start.r;
-            //    double alpha = Math.Atan(y_diff / x_diff);
+            foreach (Segment segment in segments)
+            {
+                int i = 0;
+                int x_start = segment.start.c;
+                int x_end = segment.end.c;
 
-            //    double x_increment = HOUGH_STEP * Math.Cos(alpha);
-            //    double y_increment = HOUGH_STEP * Math.Sin(alpha);
+                if (x_start == x_end)
+                {
+                    int y_start = segment.start.r;
+                    int y_end = segment.end.r;
 
-            //    double x = segment.start.c;
-            //    double y = segment.start.r;
+                    while (pixel_in_line[i].r < y_start) i++;
 
-            //    while (x <= segment.end.c)
-            //    {
-            //        inputImage.SetPixel((int)x, (int)y, Color.Red);
-            //        x += x_increment;
-            //        y += y_increment;
-            //    }
+                    while (i < pixel_in_line.Count && pixel_in_line[i].r <= y_end)
+                    {
+                        inputImage.SetPixel(pixel_in_line[i].c, pixel_in_line[i].r, Color.Red);
+                        i++;
+                    }
+                    continue;
+                }
 
-            //}
-            foreach (var pixel in pixel_in_line)
-                inputImage.SetPixel(pixel.Item1, pixel.Item2, Color.Red);
+                while (pixel_in_line[i].c < x_start) i++;
+
+                while (i < pixel_in_line.Count && pixel_in_line[i].c <= x_end)
+                {
+                    inputImage.SetPixel(pixel_in_line[i].c, pixel_in_line[i].r, Color.Red);
+                    i++;
+                }
+
+            }
         }
 
 
@@ -1812,12 +1910,13 @@ namespace INFOIBV
          * input: inputImage        Single channel image.
          * output                   Single channel image.
          */
-        byte[,] houghTransform(byte[,] inputImage)
+        int[,] houghTransform(byte[,] inputImage)
         {
+
             byte[,] newImg = thresholdImage(inputImage, 175);
             int x_off = (int)(inputImage.GetLength(0) / 2), y_off = (int)(inputImage.GetLength(1) / 2);
             double maxR = Math.Sqrt((x_off * x_off) + (y_off * y_off));
-            byte[,] newImg2 = new byte[501, 501];
+            int[,] newImg2 = new int[501, 501];
             for (int r = 0; r < newImg2.GetLength(0); r++)
                 for (int c = 0; c < newImg2.GetLength(1); c++)
                 {
@@ -1833,18 +1932,22 @@ namespace INFOIBV
                         for (int t = 0; t <= 500; t++)
                         {
                             double T = t * Math.PI / 500;
-                            double R = (((r - x_off) * Math.Cos(T)) + ((c - y_off) * Math.Sin(T)));
+                            double R = (((r - x_off) * Math.Cos(T)) + ((y_off - c) * Math.Sin(T)));
                             R += maxR;
                             int r2 = (int)Math.Ceiling((R * 500 / (maxR * 2)));
-                            if (newImg2[t, r2] < 255)
-                            {
+                            newImg2[t, r2]++;
+
+                            if (r2 >= 1)
+                                newImg2[t, r2 -1 ]++;
+
+                            if ( r2 < newImg2.GetLength(1))
                                 newImg2[t, r2]++;
-                            }
 
                         }
                     }
                 }
             }
+
 
             return newImg2;
         }

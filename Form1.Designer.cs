@@ -40,8 +40,8 @@
             this.lineDetectionButton = new System.Windows.Forms.Button();
             this.DetectAreasButton = new System.Windows.Forms.Button();
             this.LargestObjectbutton = new System.Windows.Forms.Button();
-            this.ErodeButton = new System.Windows.Forms.Button();
-            this.DilateButton = new System.Windows.Forms.Button();
+            this.LineButton = new System.Windows.Forms.Button();
+            this.Hough = new System.Windows.Forms.Button();
             this.LoadImage2Button = new System.Windows.Forms.Button();
             this.image2FileName = new System.Windows.Forms.TextBox();
             this.OrButton = new System.Windows.Forms.Button();
@@ -168,27 +168,27 @@
             this.LargestObjectbutton.UseVisualStyleBackColor = true;
             this.LargestObjectbutton.Click += new System.EventHandler(this.ClickLargestButton);
             // 
-            // ErodeButton
+            // LineButton
             // 
-            this.ErodeButton.Location = new System.Drawing.Point(630, 63);
-            this.ErodeButton.Margin = new System.Windows.Forms.Padding(4);
-            this.ErodeButton.Name = "ErodeButton";
-            this.ErodeButton.Size = new System.Drawing.Size(132, 27);
-            this.ErodeButton.TabIndex = 10;
-            this.ErodeButton.Text = "Erode";
-            this.ErodeButton.UseVisualStyleBackColor = true;
-            this.ErodeButton.Click += new System.EventHandler(this.ClickErodeButton);
+            this.LineButton.Location = new System.Drawing.Point(630, 63);
+            this.LineButton.Margin = new System.Windows.Forms.Padding(4);
+            this.LineButton.Name = "LineButton";
+            this.LineButton.Size = new System.Drawing.Size(132, 27);
+            this.LineButton.TabIndex = 10;
+            this.LineButton.Text = "Line Detection";
+            this.LineButton.UseVisualStyleBackColor = true;
+            this.LineButton.Click += new System.EventHandler(this.detectLineClick);
             // 
-            // DilateButton
+            // Hough
             // 
-            this.DilateButton.Location = new System.Drawing.Point(630, 34);
-            this.DilateButton.Margin = new System.Windows.Forms.Padding(4);
-            this.DilateButton.Name = "DilateButton";
-            this.DilateButton.Size = new System.Drawing.Size(132, 27);
-            this.DilateButton.TabIndex = 11;
-            this.DilateButton.Text = "Dilate";
-            this.DilateButton.UseVisualStyleBackColor = true;
-            this.DilateButton.Click += new System.EventHandler(this.ClickDilateButton);
+            this.Hough.Location = new System.Drawing.Point(630, 34);
+            this.Hough.Margin = new System.Windows.Forms.Padding(4);
+            this.Hough.Name = "Hough";
+            this.Hough.Size = new System.Drawing.Size(132, 27);
+            this.Hough.TabIndex = 11;
+            this.Hough.Text = "HoughTransform";
+            this.Hough.UseVisualStyleBackColor = true;
+            this.Hough.Click += new System.EventHandler(this.houghTransformClick);
             // 
             // LoadImage2Button
             // 
@@ -266,8 +266,8 @@
             this.Controls.Add(this.image2FileName);
             this.Controls.Add(this.LoadImageButton);
             this.Controls.Add(this.LoadImage2Button);
-            this.Controls.Add(this.DilateButton);
-            this.Controls.Add(this.ErodeButton);
+            this.Controls.Add(this.Hough);
+            this.Controls.Add(this.LineButton);
             this.Controls.Add(this.LargestObjectbutton);
             this.Controls.Add(this.DetectAreasButton);
             this.Controls.Add(this.lineDetectionButton);
@@ -306,8 +306,8 @@
         private System.Windows.Forms.Button lineDetectionButton;
         private System.Windows.Forms.Button DetectAreasButton;
         private System.Windows.Forms.Button LargestObjectbutton;
-        private System.Windows.Forms.Button ErodeButton;
-        private System.Windows.Forms.Button DilateButton;
+        private System.Windows.Forms.Button LineButton;
+        private System.Windows.Forms.Button Hough;
         private System.Windows.Forms.TextBox image2FileName;
         private System.Windows.Forms.Button OrButton;
         private System.Windows.Forms.Button CountValuesButton;
