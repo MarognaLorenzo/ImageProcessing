@@ -283,10 +283,10 @@ namespace INFOIBV
             hough_visualize_crossing(crossing_coords, ref OutputImage);
 
             // VISUALIZE AXIS
-            for (int c = 0; c < OutputImage.Width; c++)
-                OutputImage.SetPixel(c, OutputImage.Height / 2, Color.Coral);
-            for (int r = 0; r < OutputImage.Height; r++)
-                OutputImage.SetPixel(OutputImage.Width / 2, r, Color.Coral);
+            //for (int c = 0; c < OutputImage.Width; c++)
+            //    OutputImage.SetPixel(c, OutputImage.Height / 2, Color.Coral);
+            //for (int r = 0; r < OutputImage.Height; r++)
+            //    OutputImage.SetPixel(OutputImage.Width / 2, r, Color.Coral);
 
             pictureBoxOut.Image = (Image)OutputImage;                         // display output image
         }
@@ -615,7 +615,7 @@ namespace INFOIBV
                 {
                     max_value = Math.Max(max_value, inputImage[x, y]);
                 }
-            max_value++;
+            max_value+=2;
 
 
             // Calculating the histogram
@@ -646,6 +646,7 @@ namespace INFOIBV
                     tempImage[x, y] = (byte)((inputImage[x, y] - lower_bound) * ((float)256 / (float)(upper_bound - lower_bound)));
                     progressBar.PerformStep();                              // increment progress bar
                 }
+            histogram = new int[256]; 
             for (int a = 0; a < histogram.Length; a++) histogram[a] = 0;
             for (int x = 0; x < inputImage.GetLength(0); x++)                 // loop over columns
                 for (int y = 0; y < inputImage.GetLength(1); y++)            // loop over rows
@@ -1889,6 +1890,7 @@ namespace INFOIBV
             {
                 if (point.c < 0 || point.c >= inputImage.Width || point.r < 0 || point.r >= inputImage.Height) continue;
 
+                if (inputImage.GetPixel(point.c, point.r).ToKnownColor() != KnownColor.Red) continue;
                 inputImage.SetPixel(point.c, point.r, Color.Green);
                 if (point.c + 1 < inputImage.Width) inputImage.SetPixel(point.c + 1, point.r, Color.Green);
                 if (point.c - 1 >= 0) inputImage.SetPixel(point.c - 1, point.r, Color.Green);
