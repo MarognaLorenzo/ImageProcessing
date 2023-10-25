@@ -38,16 +38,17 @@
             this.pictureBoxOut = new System.Windows.Forms.PictureBox();
             this.progressBar = new System.Windows.Forms.ProgressBar();
             this.lineDetectionButton = new System.Windows.Forms.Button();
-            this.DetectAreasButton = new System.Windows.Forms.Button();
-            this.LargestObjectbutton = new System.Windows.Forms.Button();
+            this.ThreshVisualizeButton = new System.Windows.Forms.Button();
+            this.CloseVisualizeButton = new System.Windows.Forms.Button();
             this.LineButton = new System.Windows.Forms.Button();
             this.Hough = new System.Windows.Forms.Button();
             this.LoadImage2Button = new System.Windows.Forms.Button();
             this.image2FileName = new System.Windows.Forms.TextBox();
-            this.OrButton = new System.Windows.Forms.Button();
+            this.HoughCirclesButton = new System.Windows.Forms.Button();
             this.CountValuesButton = new System.Windows.Forms.Button();
             this.CountNonBGPixel = new System.Windows.Forms.Button();
             this.CloseButton = new System.Windows.Forms.Button();
+            this.NumberBox = new System.Windows.Forms.TextBox();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBoxIn1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBoxIn2)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBoxOut)).BeginInit();
@@ -146,27 +147,27 @@
             this.lineDetectionButton.UseVisualStyleBackColor = true;
             this.lineDetectionButton.Click += new System.EventHandler(this.houghLineDetectionClick);
             // 
-            // DetectAreasButton
+            // ThreshVisualizeButton
             // 
-            this.DetectAreasButton.Location = new System.Drawing.Point(629, 163);
-            this.DetectAreasButton.Margin = new System.Windows.Forms.Padding(4);
-            this.DetectAreasButton.Name = "DetectAreasButton";
-            this.DetectAreasButton.Size = new System.Drawing.Size(132, 27);
-            this.DetectAreasButton.TabIndex = 8;
-            this.DetectAreasButton.Text = "Floodfill";
-            this.DetectAreasButton.UseVisualStyleBackColor = true;
-            this.DetectAreasButton.Click += new System.EventHandler(this.ClickFloodFillButton);
+            this.ThreshVisualizeButton.Location = new System.Drawing.Point(629, 163);
+            this.ThreshVisualizeButton.Margin = new System.Windows.Forms.Padding(4);
+            this.ThreshVisualizeButton.Name = "ThreshVisualizeButton";
+            this.ThreshVisualizeButton.Size = new System.Drawing.Size(132, 27);
+            this.ThreshVisualizeButton.TabIndex = 8;
+            this.ThreshVisualizeButton.Text = "ThresholdVisualize";
+            this.ThreshVisualizeButton.UseVisualStyleBackColor = true;
+            this.ThreshVisualizeButton.Click += new System.EventHandler(this.showStudyThresholdClick);
             // 
-            // LargestObjectbutton
+            // CloseVisualizeButton
             // 
-            this.LargestObjectbutton.Location = new System.Drawing.Point(769, 163);
-            this.LargestObjectbutton.Margin = new System.Windows.Forms.Padding(4);
-            this.LargestObjectbutton.Name = "LargestObjectbutton";
-            this.LargestObjectbutton.Size = new System.Drawing.Size(132, 27);
-            this.LargestObjectbutton.TabIndex = 9;
-            this.LargestObjectbutton.Text = "Largest object";
-            this.LargestObjectbutton.UseVisualStyleBackColor = true;
-            this.LargestObjectbutton.Click += new System.EventHandler(this.ClickLargestButton);
+            this.CloseVisualizeButton.Location = new System.Drawing.Point(769, 163);
+            this.CloseVisualizeButton.Margin = new System.Windows.Forms.Padding(4);
+            this.CloseVisualizeButton.Name = "CloseVisualizeButton";
+            this.CloseVisualizeButton.Size = new System.Drawing.Size(132, 27);
+            this.CloseVisualizeButton.TabIndex = 9;
+            this.CloseVisualizeButton.Text = "CloseVisualize";
+            this.CloseVisualizeButton.UseVisualStyleBackColor = true;
+            this.CloseVisualizeButton.Click += new System.EventHandler(this.showStudyCloseImageClick);
             // 
             // LineButton
             // 
@@ -177,7 +178,7 @@
             this.LineButton.TabIndex = 10;
             this.LineButton.Text = "Line Detection";
             this.LineButton.UseVisualStyleBackColor = true;
-            this.LineButton.Click += new System.EventHandler(this.detectLineClick);
+            this.LineButton.Click += new System.EventHandler(this.LineDetectionClick);
             // 
             // Hough
             // 
@@ -210,16 +211,16 @@
             this.image2FileName.Size = new System.Drawing.Size(420, 22);
             this.image2FileName.TabIndex = 13;
             // 
-            // OrButton
+            // HoughCirclesButton
             // 
-            this.OrButton.Location = new System.Drawing.Point(769, 98);
-            this.OrButton.Margin = new System.Windows.Forms.Padding(4);
-            this.OrButton.Name = "OrButton";
-            this.OrButton.Size = new System.Drawing.Size(132, 27);
-            this.OrButton.TabIndex = 15;
-            this.OrButton.Text = "Or";
-            this.OrButton.UseVisualStyleBackColor = true;
-            this.OrButton.Click += new System.EventHandler(this.ClickOr);
+            this.HoughCirclesButton.Location = new System.Drawing.Point(769, 98);
+            this.HoughCirclesButton.Margin = new System.Windows.Forms.Padding(4);
+            this.HoughCirclesButton.Name = "HoughCirclesButton";
+            this.HoughCirclesButton.Size = new System.Drawing.Size(132, 27);
+            this.HoughCirclesButton.TabIndex = 15;
+            this.HoughCirclesButton.Text = "HoughCircles";
+            this.HoughCirclesButton.UseVisualStyleBackColor = true;
+            this.HoughCirclesButton.Click += new System.EventHandler(this.HoughCircles);
             // 
             // CountValuesButton
             // 
@@ -250,9 +251,17 @@
             this.CloseButton.Name = "CloseButton";
             this.CloseButton.Size = new System.Drawing.Size(132, 27);
             this.CloseButton.TabIndex = 18;
-            this.CloseButton.Text = "Closing";
+            this.CloseButton.Text = "EdgeDetection";
             this.CloseButton.UseVisualStyleBackColor = true;
-            this.CloseButton.Click += new System.EventHandler(this.ClickClose);
+            this.CloseButton.Click += new System.EventHandler(this.edgedetectionClick);
+            // 
+            // NumberBox
+            // 
+            this.NumberBox.Location = new System.Drawing.Point(909, 102);
+            this.NumberBox.Name = "NumberBox";
+            this.NumberBox.Size = new System.Drawing.Size(100, 22);
+            this.NumberBox.TabIndex = 19;
+            this.NumberBox.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.NumberBox_KeyPress);
             // 
             // INFOIBV
             // 
@@ -261,15 +270,16 @@
             this.ClientSize = new System.Drawing.Size(1924, 1053);
             this.Controls.Add(this.CloseButton);
             this.Controls.Add(this.CountNonBGPixel);
+            this.Controls.Add(this.NumberBox);
             this.Controls.Add(this.CountValuesButton);
-            this.Controls.Add(this.OrButton);
+            this.Controls.Add(this.HoughCirclesButton);
             this.Controls.Add(this.image2FileName);
             this.Controls.Add(this.LoadImageButton);
             this.Controls.Add(this.LoadImage2Button);
             this.Controls.Add(this.Hough);
             this.Controls.Add(this.LineButton);
-            this.Controls.Add(this.LargestObjectbutton);
-            this.Controls.Add(this.DetectAreasButton);
+            this.Controls.Add(this.CloseVisualizeButton);
+            this.Controls.Add(this.ThreshVisualizeButton);
             this.Controls.Add(this.lineDetectionButton);
             this.Controls.Add(this.progressBar);
             this.Controls.Add(this.pictureBoxOut);
@@ -304,15 +314,15 @@
         private System.Windows.Forms.PictureBox pictureBoxOut;
         private System.Windows.Forms.ProgressBar progressBar;
         private System.Windows.Forms.Button lineDetectionButton;
-        private System.Windows.Forms.Button DetectAreasButton;
-        private System.Windows.Forms.Button LargestObjectbutton;
+        private System.Windows.Forms.Button ThreshVisualizeButton;
+        private System.Windows.Forms.Button CloseVisualizeButton;
         private System.Windows.Forms.Button LineButton;
         private System.Windows.Forms.Button Hough;
         private System.Windows.Forms.TextBox image2FileName;
-        private System.Windows.Forms.Button OrButton;
+        private System.Windows.Forms.Button HoughCirclesButton;
         private System.Windows.Forms.Button CountValuesButton;
         private System.Windows.Forms.Button CountNonBGPixel;
         private System.Windows.Forms.Button CloseButton;
+        private System.Windows.Forms.TextBox NumberBox;
     }
 }
-
