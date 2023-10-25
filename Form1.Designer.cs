@@ -37,7 +37,7 @@
             this.saveButton = new System.Windows.Forms.Button();
             this.pictureBoxOut = new System.Windows.Forms.PictureBox();
             this.progressBar = new System.Windows.Forms.ProgressBar();
-            this.lineDetectionButton = new System.Windows.Forms.Button();
+            this.HoughLineDetectionButton = new System.Windows.Forms.Button();
             this.ThreshVisualizeButton = new System.Windows.Forms.Button();
             this.CloseVisualizeButton = new System.Windows.Forms.Button();
             this.LineButton = new System.Windows.Forms.Button();
@@ -45,10 +45,9 @@
             this.LoadImage2Button = new System.Windows.Forms.Button();
             this.image2FileName = new System.Windows.Forms.TextBox();
             this.HoughCirclesButton = new System.Windows.Forms.Button();
-            this.CountValuesButton = new System.Windows.Forms.Button();
-            this.CountNonBGPixel = new System.Windows.Forms.Button();
             this.CloseButton = new System.Windows.Forms.Button();
             this.NumberBox = new System.Windows.Forms.TextBox();
+            this.HTAngleLimit = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBoxIn1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBoxIn2)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBoxOut)).BeginInit();
@@ -136,16 +135,16 @@
             this.progressBar.TabIndex = 6;
             this.progressBar.Visible = false;
             // 
-            // lineDetectionButton
+            // HoughLineDetectionButton
             // 
-            this.lineDetectionButton.Location = new System.Drawing.Point(629, 98);
-            this.lineDetectionButton.Margin = new System.Windows.Forms.Padding(4);
-            this.lineDetectionButton.Name = "lineDetectionButton";
-            this.lineDetectionButton.Size = new System.Drawing.Size(132, 27);
-            this.lineDetectionButton.TabIndex = 7;
-            this.lineDetectionButton.Text = "houge_line_detection";
-            this.lineDetectionButton.UseVisualStyleBackColor = true;
-            this.lineDetectionButton.Click += new System.EventHandler(this.houghLineDetectionClick);
+            this.HoughLineDetectionButton.Location = new System.Drawing.Point(629, 98);
+            this.HoughLineDetectionButton.Margin = new System.Windows.Forms.Padding(4);
+            this.HoughLineDetectionButton.Name = "HoughLineDetectionButton";
+            this.HoughLineDetectionButton.Size = new System.Drawing.Size(132, 27);
+            this.HoughLineDetectionButton.TabIndex = 7;
+            this.HoughLineDetectionButton.Text = "houge_line_detection";
+            this.HoughLineDetectionButton.UseVisualStyleBackColor = true;
+            this.HoughLineDetectionButton.Click += new System.EventHandler(this.houghLineDetectionClick);
             // 
             // ThreshVisualizeButton
             // 
@@ -220,29 +219,7 @@
             this.HoughCirclesButton.TabIndex = 15;
             this.HoughCirclesButton.Text = "HoughCircles";
             this.HoughCirclesButton.UseVisualStyleBackColor = true;
-            this.HoughCirclesButton.Click += new System.EventHandler(this.HoughCircles);
-            // 
-            // CountValuesButton
-            // 
-            this.CountValuesButton.Location = new System.Drawing.Point(909, 163);
-            this.CountValuesButton.Margin = new System.Windows.Forms.Padding(4);
-            this.CountValuesButton.Name = "CountValuesButton";
-            this.CountValuesButton.Size = new System.Drawing.Size(132, 27);
-            this.CountValuesButton.TabIndex = 16;
-            this.CountValuesButton.Text = "Count Values";
-            this.CountValuesButton.UseVisualStyleBackColor = true;
-            this.CountValuesButton.Click += new System.EventHandler(this.ClickCountValues);
-            // 
-            // CountNonBGPixel
-            // 
-            this.CountNonBGPixel.Location = new System.Drawing.Point(770, 128);
-            this.CountNonBGPixel.Margin = new System.Windows.Forms.Padding(4);
-            this.CountNonBGPixel.Name = "CountNonBGPixel";
-            this.CountNonBGPixel.Size = new System.Drawing.Size(132, 27);
-            this.CountNonBGPixel.TabIndex = 17;
-            this.CountNonBGPixel.Text = "Opening";
-            this.CountNonBGPixel.UseVisualStyleBackColor = true;
-            this.CountNonBGPixel.Click += new System.EventHandler(this.ClickOpen);
+            this.HoughCirclesButton.Click += new System.EventHandler(this.HoughCirclesClick);
             // 
             // CloseButton
             // 
@@ -263,15 +240,25 @@
             this.NumberBox.TabIndex = 19;
             this.NumberBox.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.NumberBox_KeyPress);
             // 
+            // HTAngleLimit
+            // 
+            this.HTAngleLimit.Location = new System.Drawing.Point(770, 128);
+            this.HTAngleLimit.Margin = new System.Windows.Forms.Padding(4);
+            this.HTAngleLimit.Name = "HTAngleLimit";
+            this.HTAngleLimit.Size = new System.Drawing.Size(132, 27);
+            this.HTAngleLimit.TabIndex = 20;
+            this.HTAngleLimit.Text = "HTAngleLimit";
+            this.HTAngleLimit.UseVisualStyleBackColor = true;
+            this.HTAngleLimit.Click += new System.EventHandler(this.houghTransformAngleLimitClick);
+            // 
             // INFOIBV
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1924, 1053);
+            this.Controls.Add(this.HTAngleLimit);
             this.Controls.Add(this.CloseButton);
-            this.Controls.Add(this.CountNonBGPixel);
             this.Controls.Add(this.NumberBox);
-            this.Controls.Add(this.CountValuesButton);
             this.Controls.Add(this.HoughCirclesButton);
             this.Controls.Add(this.image2FileName);
             this.Controls.Add(this.LoadImageButton);
@@ -280,7 +267,7 @@
             this.Controls.Add(this.LineButton);
             this.Controls.Add(this.CloseVisualizeButton);
             this.Controls.Add(this.ThreshVisualizeButton);
-            this.Controls.Add(this.lineDetectionButton);
+            this.Controls.Add(this.HoughLineDetectionButton);
             this.Controls.Add(this.progressBar);
             this.Controls.Add(this.pictureBoxOut);
             this.Controls.Add(this.saveButton);
@@ -313,16 +300,15 @@
         private System.Windows.Forms.Button saveButton;
         private System.Windows.Forms.PictureBox pictureBoxOut;
         private System.Windows.Forms.ProgressBar progressBar;
-        private System.Windows.Forms.Button lineDetectionButton;
+        private System.Windows.Forms.Button HoughLineDetectionButton;
         private System.Windows.Forms.Button ThreshVisualizeButton;
         private System.Windows.Forms.Button CloseVisualizeButton;
         private System.Windows.Forms.Button LineButton;
         private System.Windows.Forms.Button Hough;
         private System.Windows.Forms.TextBox image2FileName;
         private System.Windows.Forms.Button HoughCirclesButton;
-        private System.Windows.Forms.Button CountValuesButton;
-        private System.Windows.Forms.Button CountNonBGPixel;
         private System.Windows.Forms.Button CloseButton;
         private System.Windows.Forms.TextBox NumberBox;
+        private System.Windows.Forms.Button HTAngleLimit;
     }
 }
