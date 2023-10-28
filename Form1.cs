@@ -22,6 +22,13 @@ namespace INFOIBV
         private sbyte[,] hPrewittfilter = new sbyte[3, 3] { { -1, 0, 1 },
                                              { -1, 0, 1 },
                                              { -1, 0, 1 } };
+        private sbyte[,] vSobelfilter = new sbyte[3, 3] { { -1, -2, -1 },
+                                             {  0 , 0,  0 },
+                                             {  1,  2,  1 } };
+
+        private sbyte[,] hSobelfilter = new sbyte[3, 3] { { -1, 0, 1 },
+                                             { -2, 0, 2 },
+                                             { -1, 0, 1 } };
 
         private double THRESHOLD = 0.6;
         private int CLOSE_DIM = 11;
@@ -164,8 +171,9 @@ namespace INFOIBV
 
             byte[,] g_scale_image = convertToGrayscale(Image);          // convert image to grayscale
             byte[,] contrast = adjustContrast(g_scale_image);
-            byte[,] edge_image = edgeMagnitude(contrast, hPrewittfilter, vPrewittfilter);
-            byte[,] workingImage = g_scale_image ;
+            byte[,] sharpen = edge_sharpening(contrast,3,3);
+            byte[,] edge_image = edgeMagnitude(contrast, hSobelfilter, vSobelfilter);
+            byte[,] workingImage = sharpen ;
             List<(double, double)> lines = peakFinding(edge_image, THRESHOLD); // find peaks
 
 
