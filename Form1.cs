@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
+using static System.Windows.Forms.LinkLabel;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.ToolTip;
 
 
 namespace INFOIBV
@@ -21,7 +23,7 @@ namespace INFOIBV
                                              { -1, 0, 1 },
                                              { -1, 0, 1 } };
 
-        private double THRESHOLD = 0.7;
+        private double THRESHOLD = 0.6;
         private int CLOSE_DIM = 11;
         private int MINIMUM_THRESHOLD = 70;
         private int MINIMUM_LENGHT = 20;
@@ -136,7 +138,7 @@ namespace INFOIBV
 
             // VISUALIZE RED LINES
             for (int i = 0; i < segments.Count; i++)
-                hough_visualization(segments[i], ref OutputImage, pixel_in_lines[i]);
+                hough_visualization(segments[i], ref OutputImage, pixel_in_lines[i], Color.Red);
 
             //VISUALIZE GREEN DOTS
             hough_visualize_crossing(crossing_coords, ref OutputImage);
@@ -146,6 +148,85 @@ namespace INFOIBV
         }
 
 
+
+        private void FindSquaresClick(object sender, EventArgs e)
+        {
+            if (InputImage1 == null) return;                                 // get out if no input image
+            if (OutputImage != null) OutputImage.Dispose();                 // reset output image
+            OutputImage = new Bitmap(InputImage1.Size.Width, InputImage1.Size.Height); // create new output image
+            Color[,] Image = new Color[InputImage1.Size.Width, InputImage1.Size.Height]; // create array to speed-up operations (Bitmap functions are very slow)
+
+            // copy input Bitmap to array            
+            for (int x = 0; x < InputImage1.Size.Width; x++)                 // loop over columns
+                for (int y = 0; y < InputImage1.Size.Height; y++)            // loop over rows
+                    Image[x, y] = InputImage1.GetPixel(x, y);                // set pixel color in array at (x,y)
+
+
+            byte[,] g_scale_image = convertToGrayscale(Image);          // convert image to grayscale
+            byte[,] contrast = adjustContrast(g_scale_image);
+            byte[,] edge_image = edgeMagnitude(contrast, hPrewittfilter, vPrewittfilter);
+            byte[,] workingImage = g_scale_image ;
+            List<(double, double)> lines = peakFinding(edge_image, THRESHOLD); // find peaks
+
+
+
+            (List<(double, double)> square, List<int> square_index) = findSquare(lines, ref workingImage);
+
+            List<(int, int)> vertices = hough_crossing_line(square, workingImage);
+
+            // blob detection
+            List<(int x, int y)> blobs = new List<(int x, int y)>();
+            if (vertices.Count > 1)
+            {
+                (int top, int right, int bottom, int left) region = region_square(vertices);
+                byte[,] crop = cropImage(contrast, region);
+                blobs = blobFinding(crop, 0.2, ref workingImage);
+                for (int i = 0; i < blobs.Count; i++)
+                    blobs[i] = (blobs[i].x + region.left, blobs[i].y + region.bottom);
+            }
+
+
+
+
+            List<List<Segment>> segments = new List<List<Segment>>();
+            List<List<(int, int)>> pixel_in_lines = new List<List<(int, int)>>();
+
+            foreach ((double r, double theta) line in lines) // for every detected lines find segments and whole line ( easier for computation and precision)
+            {
+                (List<Segment> segmentsToAdd, List<(int, int)> pixels_on_line) = hough_line_detection(workingImage, line.r, line.theta, MINIMUM_THRESHOLD, MINIMUM_LENGHT, MAXIMUM_GAP);
+                segments.Add(segmentsToAdd);
+                pixel_in_lines.Add(pixels_on_line);
+            }
+
+            List<(int, int)> crossing_coords = hough_crossing_line(lines, workingImage); // find crossing points
+
+
+            OutputImage = new Bitmap(workingImage.GetLength(0), workingImage.GetLength(1)); // create new output image
+
+            // copy array to output Bitmap
+            for (
+
+                int x = 0; x < workingImage.GetLength(0); x++)             // loop over columns
+                for (int y = 0; y < workingImage.GetLength(1); y++)         // loop over rows
+                {
+                    Color newColor = Color.FromArgb(workingImage[x, y], workingImage[x, y], workingImage[x, y]);
+                    OutputImage.SetPixel(x, y, newColor);                  // set the pixel color at coordinate (x,y)
+                }
+
+            // VISUALIZE LINES
+            for (int i = 0; i < segments.Count; i++)
+                hough_visualization(segments[i], ref OutputImage, pixel_in_lines[i], square_index.Exists(x => x == i) ? Color.Blue : Color.Red);
+
+            //VISUALIZE DOTS
+            hough_visualize_crossing(crossing_coords, ref OutputImage);
+
+            hough_visualize_crossing(vertices, ref OutputImage, false, Color.Orange);
+
+            hough_visualize_crossing(blobs, ref OutputImage, false, Color.YellowGreen);
+
+            pictureBoxOut.Image = (Image)OutputImage;                         // display output image
+
+        }
 
         private void LineDetectionClick(object sender, EventArgs e)
         {
@@ -194,7 +275,7 @@ namespace INFOIBV
 
             // VISUALIZE RED LINES
             for (int i = 0; i < segments.Count; i++)
-                hough_visualization(segments[i], ref OutputImage, pixel_in_lines[i]);
+                hough_visualization(segments[i], ref OutputImage, pixel_in_lines[i], Color.Red);
 
             //VISUALIZE GREEN DOTS
             hough_visualize_crossing(crossing_coords, ref OutputImage);
@@ -452,6 +533,17 @@ namespace INFOIBV
             return tempImage;
         }
 
+        private byte[,] cropImage(byte[,] inputImage, (int top, int right, int bottom, int left) coords)
+        {
+            int top = coords.top; int right = coords.right; int bottom = coords.bottom;int left = coords.left;
+            byte[,] res = new byte[right - left, top - bottom];
+
+            for (int c = left; c < right; c++)
+                for (int r = bottom; r < top; r++)
+                    res[c - left, r - bottom] = inputImage[c, r];
+            return res;
+        }
+
 
         // ====================================================================
         // ============= YOUR FUNCTIONS FOR ASSIGNMENT 1 GO HERE ==============
@@ -469,8 +561,8 @@ namespace INFOIBV
             progressBar.Step = 1;
 
             // process all pixels in the image
-            for (int x = 0; x < InputImage1.Size.Width; x++)                 // loop over columns
-                for (int y = 0; y < InputImage1.Size.Height; y++)            // loop over rows
+            for (int x = 0; x < inputImage.GetLength(0); x++)                 // loop over columns
+                for (int y = 0; y < inputImage.GetLength(1); y++)            // loop over rows
                 {
                     // get pixel color
                     tempImage[x, y] = (byte)(255 - inputImage[x, y]);      // invert pixel
@@ -928,6 +1020,7 @@ namespace INFOIBV
                     float vect_sum = (float)Math.Sqrt(Math.Pow(h_sum, 2) + Math.Pow(v_sum, 2));
                     vect_sum = Math.Max(Math.Min(vect_sum, 255), 0);
                     tempImage[col, row] = (byte)vect_sum;
+                    if (row == 0 || row == N - 1 || col == 0 || col == M - 1) tempImage[col, row] = 0;
                     progressBar.PerformStep();
                 }
 
@@ -1611,7 +1704,7 @@ namespace INFOIBV
         */
         int[,] houghTransform(byte[,] inputImage)
         {
-            int x_off = (int)(inputImage.GetLength(0) / 2), y_off = (int)(inputImage.GetLength(1) / 2);
+            int x_off = (inputImage.GetLength(0) / 2), y_off = (inputImage.GetLength(1) / 2);
             double maxR = Math.Sqrt((x_off * x_off) + (y_off * y_off));
             int[,] newImg2 = new int[501, 501];
             for (int r = 0; r < newImg2.GetLength(0); r++)
@@ -1626,9 +1719,9 @@ namespace INFOIBV
                 sincosTable[t] = (Math.Sin(T), Math.Cos(T));
             }
 
-                for (int r = 0; r < inputImage.GetLength(0); r++)
+            for (int r = 1; r < inputImage.GetLength(0) - 1; r++)
             {
-                for (int c = 0; c < inputImage.GetLength(1); c++) // for every pixel
+                for (int c = 1; c < inputImage.GetLength(1) - 1; c++) // for every pixel
                 {
                     if (inputImage[r, c] != 0)
                     {
@@ -1637,13 +1730,14 @@ namespace INFOIBV
                             double R = (r - x_off) * sincosTable[t].cos + ((y_off - c) * sincosTable[t].sin); // find corresponding radius
                             R += maxR;
                             int r2 = (int)(R * 500 / (maxR * 2));
+                            
                             newImg2[t, r2] += inputImage[r, c]; // increment accumulator
 
                             if (r2 >= 1)
                                 newImg2[t, r2 - 1] += inputImage[r, c];// increment value with radius +- 1
 
-                            if (r2 < newImg2.GetLength(1))
-                                newImg2[t, r2] += inputImage[r, c];
+                            if (r2 < newImg2.GetLength(1) - 1)
+                                newImg2[t, r2 + 1] += inputImage[r, c];
                         }
                     }
                 }
@@ -1684,6 +1778,39 @@ namespace INFOIBV
                 lines.Add((R, T));
             }
             return lines;
+        }
+
+        List<(int x, int y)> blobFinding(byte[,] inputImage, double threshold, ref byte[,] workingImage)
+        {
+
+            byte[,] thresholded = thresholdImage(inputImage, (int)(threshold * 255));
+            byte[,] invert = invertImage(thresholded);
+            byte[,] open_invert = openImage(invert, createStructuringElement(5, SEShape.Plus), true);
+
+            byte[,] flood = floodFill(open_invert); // label all regions with an incremental ID
+
+            IDictionary<int, (int count, int sumx, int sumy)> map = new Dictionary<int, (int, int, int)>();// data structure for finding centroids x and y position
+
+            for (int c = 0; c < flood.GetLength(0); c++) // find centroids
+                for (int r = 0; r < flood.GetLength(1); r++)
+                {
+                    if (flood[c, r] == 0) continue; // bg pixels are not important
+                    (int a, int b, int c) elem = (0, 0, 0);
+                    if (map.ContainsKey(flood[c, r])) elem = map[flood[c, r]];
+                    elem = (elem.a + 1, elem.b + c, elem.c + r);
+                    map[flood[c, r]] = elem;
+                }
+
+
+            List<(int, int)> blobs = new List<(int, int)>();
+            foreach (var kv in map)// for each kea value in the dictionary with centroids sums and count of pixels get the average and add it to the result
+            {
+                int x = kv.Value.sumx / kv.Value.count;
+                int y = kv.Value.sumy / kv.Value.count;
+                Console.WriteLine("Blob: x: " + x + " y: " + y);
+                blobs.Add((x, y));
+            }
+            return blobs;
         }
 
         /*
@@ -1795,7 +1922,7 @@ namespace INFOIBV
         * output:                                   Bitmap with red segmentsToAdd on it
         */
 
-        void hough_visualization(List<Segment> segments, ref Bitmap inputImage, List<(int c, int r)> pixel_in_line)
+        void hough_visualization(List<Segment> segments, ref Bitmap inputImage, List<(int c, int r)> pixel_in_line, Color color)
         {
             foreach (Segment segment in segments)// for each segment
             {
@@ -1803,7 +1930,7 @@ namespace INFOIBV
                 foreach (var pixel in pixel_in_line)//for each pixel in the line walk through the line, when I meet the start of the segment I start drawing until I find the end of the segment
                 {
                     if (pixel == segment.start) start = true;
-                    else if (start) inputImage.SetPixel(pixel.c, pixel.r, Color.Red);
+                    else if (start) inputImage.SetPixel(pixel.c, pixel.r, color);
                     if (pixel == segment.end) break;
                 }
             }
@@ -1825,7 +1952,7 @@ namespace INFOIBV
             {
                 (double r, double theta) line1 = lines[i];
                 for (int j = i + 1; j < lines.Count; j++) // for every combination of lines
-                { 
+                {
                     (double r, double theta) line2 = lines[j];
                     if (line1.theta == line2.theta) continue; // parallel lines do not have crossing points
 
@@ -1847,7 +1974,7 @@ namespace INFOIBV
                     }
                     else
                     {
-                        if (sin1 == 0) 
+                        if (sin1 == 0)
                         {
                             x = r1;
                             y = (r2 - x * cos2) / sin2;
@@ -1883,6 +2010,20 @@ namespace INFOIBV
                 if (point.c - 1 >= 0) inputImage.SetPixel(point.c - 1, point.r, Color.Green);
                 if (point.r + 1 < inputImage.Height) inputImage.SetPixel(point.c, point.r + 1, Color.Green);
                 if (point.r - 1 >= 0) inputImage.SetPixel(point.c, point.r - 1, Color.Green);
+            }
+        }
+        void hough_visualize_crossing(List<(int c, int r)> crossing_coords, ref Bitmap inputImage, bool only_on_segment, Color color)
+        {
+            foreach ((int c, int r) point in crossing_coords) // visualize every crossing point with a plus-shaped marker
+            {
+                if (point.c < 0 || point.c >= inputImage.Width || point.r < 0 || point.r >= inputImage.Height) continue;
+
+                if (only_on_segment && inputImage.GetPixel(point.c, point.r).R != 255) continue;
+                inputImage.SetPixel(point.c, point.r, color);
+                if (point.c + 1 < inputImage.Width) inputImage.SetPixel(point.c + 1, point.r, color);
+                if (point.c - 1 >= 0) inputImage.SetPixel(point.c - 1, point.r, color);
+                if (point.r + 1 < inputImage.Height) inputImage.SetPixel(point.c, point.r + 1, color);
+                if (point.r - 1 >= 0) inputImage.SetPixel(point.c, point.r - 1, color);
             }
         }
 
@@ -2033,6 +2174,73 @@ namespace INFOIBV
             {
                 e.Handled = true;
             }
+        }
+
+        private (int top, int right, int bottom, int left) region_square(List<(int x, int y)> vertices)
+        {
+            if (vertices.Count == 0) throw new Exception("No vertices");
+            int top = vertices[0].y;
+            int bottom = vertices[0].y;
+            int left = vertices[0].x;
+            int right = vertices[0].x;
+            foreach ((int x, int y) point in vertices)
+            {
+                top = Math.Max(top, point.y);
+                bottom = Math.Min(bottom, point.y);
+                left = Math.Min(left, point.x);
+                right = Math.Max(right, point.x);
+            }
+            return (top, right, bottom, left);
+        }
+
+        (List<(double, double)> square, List<int> square_index) findSquare(List<(double r, double theta)> lines, ref byte[,] workingImage)
+        {
+            List<(double, double)> square = new List<(double, double)>();
+            List<int> square_index = new List<int>();
+
+
+            for (int i = 0; i < lines.Count; i++)
+            {
+                (double r, double theta) line1 = lines[i];
+
+                bool stop = false;
+                foreach ((double r, double theta) compare in square)
+                {
+                    double diff = Math.Abs(line1.theta - compare.theta);
+                    if (diff < 5 || diff > 175)
+                    {
+                        if (Math.Abs(line1.r - compare.r) < 4)
+                        {
+                            stop = true;
+                            break;
+                        }
+                        if (diff > 175 && Math.Abs(line1.r + compare.r) < 5)
+                        {
+                            stop = true;
+                            break;
+                        }
+
+                    }
+
+                }
+                if (stop) continue;
+
+                for (int j = i + 1; j < lines.Count; j++)
+                {
+                    (double r, double theta) line2 = lines[j];
+                    double diff = Math.Abs(line1.theta - line2.theta);
+                    if ((diff < 5 || diff > 175) && Math.Abs(line1.r - line2.r) > 25)
+                    {
+                        Console.WriteLine("Parallel line: " + line1.ToString() + "with " + line2.ToString());
+                        square.Add(line1);
+                        square.Add(line2);
+                        square_index.Add(i);
+                        square_index.Add(j);
+                        break;
+                    }
+                }
+            }
+            return (square, square_index);
         }
     }
 }
