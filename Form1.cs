@@ -171,9 +171,8 @@ namespace INFOIBV
 
             byte[,] g_scale_image = convertToGrayscale(Image);          // convert image to grayscale
             byte[,] contrast = adjustContrast(g_scale_image);
-            byte[,] sharpen = edge_sharpening(contrast,3,3);
             byte[,] edge_image = edgeMagnitude(contrast, hSobelfilter, vSobelfilter);
-            byte[,] workingImage = sharpen ;
+            byte[,] workingImage = contrast;
             List<(double, double)> lines = peakFinding(edge_image, THRESHOLD); // find peaks
 
 
@@ -2207,48 +2206,48 @@ namespace INFOIBV
             List<int> square_index = new List<int>();
 
 
+            //List<var> parallel_lines = new List<var>();
+
+            List<double> used_thetas = new List<double>();
+
             for (int i = 0; i < lines.Count; i++)
             {
                 (double r, double theta) line1 = lines[i];
-
-                bool stop = false;
-                foreach ((double r, double theta) compare in square)
-                {
-                    double diff = Math.Abs(line1.theta - compare.theta);
-                    if (diff < 5 || diff > 175)
-                    {
-                        if (Math.Abs(line1.r - compare.r) < 4)
-                        {
-                            stop = true;
-                            break;
-                        }
-                        if (diff > 175 && Math.Abs(line1.r + compare.r) < 5)
-                        {
-                            stop = true;
-                            break;
-                        }
-
-                    }
-
-                }
-                if (stop) continue;
+                if (square.Exists(line_in_square => areAlmostSame(line_in_square, line1))) continue;
 
                 for (int j = i + 1; j < lines.Count; j++)
                 {
                     (double r, double theta) line2 = lines[j];
-                    double diff = Math.Abs(line1.theta - line2.theta);
-                    if ((diff < 5 || diff > 175) && Math.Abs(line1.r - line2.r) > 25)
+                    if (square.Exists(line_in_square => areAlmostSame(line_in_square, line2))) continue;
+                    
+                    if (areDistantParallel(line1, line2))
                     {
                         Console.WriteLine("Parallel line: " + line1.ToString() + "with " + line2.ToString());
                         square.Add(line1);
                         square.Add(line2);
                         square_index.Add(i);
                         square_index.Add(j);
-                        break;
+                        used_thetas.Add((line1.theta + line2.theta) / 2);
                     }
                 }
             }
             return (square, square_index);
+        }
+
+        private bool areAlmostSame((double r, double theta) line1, (double r, double theta) line2)
+        {
+            double diff = Math.Abs(line1.theta - line2.theta);
+            if (diff < 5 && Math.Abs(line1.r - line2.r) < 4) return true;
+            if (diff > 175 && Math.Abs(line1.r + line2.r) < 5) return true;
+
+            return false;
+        }
+        private bool areDistantParallel((double r, double theta) line1, (double r, double theta) line2)
+        {
+            double diff = Math.Abs(line1.theta - line2.theta);
+            if (diff < 5 && Math.Abs(line1.r - line2.r ) > 25) return true;
+            if (diff > 175 && Math.Abs(line1.r + line2.r ) > 25) return true;
+            return false;
         }
     }
 }
