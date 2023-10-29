@@ -48,6 +48,7 @@
             this.CloseButton = new System.Windows.Forms.Button();
             this.NumberBox = new System.Windows.Forms.TextBox();
             this.HTAngleLimit = new System.Windows.Forms.Button();
+            this.FindSocketButton = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBoxIn1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBoxIn2)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBoxOut)).BeginInit();
@@ -251,11 +252,23 @@
             this.HTAngleLimit.UseVisualStyleBackColor = true;
             this.HTAngleLimit.Click += new System.EventHandler(this.houghTransformAngleLimitClick);
             // 
+            // FindSocketButton
+            // 
+            this.FindSocketButton.Location = new System.Drawing.Point(490, 128);
+            this.FindSocketButton.Margin = new System.Windows.Forms.Padding(4);
+            this.FindSocketButton.Name = "FindSocketButton";
+            this.FindSocketButton.Size = new System.Drawing.Size(132, 27);
+            this.FindSocketButton.TabIndex = 21;
+            this.FindSocketButton.Text = "FindSocket";
+            this.FindSocketButton.UseVisualStyleBackColor = true;
+            this.FindSocketButton.Click += new System.EventHandler(this.FindSocketClick);
+            // 
             // INFOIBV
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1924, 1053);
+            this.Controls.Add(this.FindSocketButton);
             this.Controls.Add(this.HTAngleLimit);
             this.Controls.Add(this.CloseButton);
             this.Controls.Add(this.NumberBox);
@@ -310,5 +323,6 @@
         private System.Windows.Forms.Button CloseButton;
         private System.Windows.Forms.TextBox NumberBox;
         private System.Windows.Forms.Button HTAngleLimit;
+        private System.Windows.Forms.Button FindSocketButton;
     }
 }

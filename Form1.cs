@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
+using System.Net.Sockets;
 using System.Windows.Forms;
 using static System.Windows.Forms.LinkLabel;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.ToolTip;
@@ -156,8 +157,9 @@ namespace INFOIBV
 
 
 
-        private void FindSquaresClick(object sender, EventArgs e)
+        private void FindSocketClick(object sender, EventArgs e)
         {
+            bool detectedSocket = false;
             if (InputImage1 == null) return;                                 // get out if no input image
             if (OutputImage != null) OutputImage.Dispose();                 // reset output image
             OutputImage = new Bitmap(InputImage1.Size.Width, InputImage1.Size.Height); // create new output image
@@ -187,11 +189,31 @@ namespace INFOIBV
             {
                 (int top, int right, int bottom, int left) region = region_square(vertices);
                 byte[,] crop = cropImage(contrast, region);
-                blobs = blobFinding(crop, 0.2, ref workingImage);
+                byte[,] reAdjust = adjustContrast(crop);
+                blobs = blobFinding(reAdjust, 0.2, ref workingImage);
                 for (int i = 0; i < blobs.Count; i++)
                     blobs[i] = (blobs[i].x + region.left, blobs[i].y + region.bottom);
-            }
+                if (vertices.Count == 4)
+                {
+                    if (blobs.Count < 2)
+                    {
+                        Console.WriteLine("Socket not found");
+                        return;
+                    }
+                    if (blobs.Count == 3 || blobs.Count == 2)
+                    {
+                        if( blobs.All(bl => Math.Abs(bl.x - blobs[0].x) < 3) || blobs.All(bl => Math.Abs(bl.y - blobs[0].y) < 3))
+                        {
+                            detectedSocket = true;
+                            Console.WriteLine("Socket found");
+                        }
+                    }
 
+
+                }
+
+
+            }
 
 
 
@@ -220,15 +242,25 @@ namespace INFOIBV
                     OutputImage.SetPixel(x, y, newColor);                  // set the pixel color at coordinate (x,y)
                 }
 
-            // VISUALIZE LINES
+            //// VISUALIZE LINES
+            //for (int i = 0; i < segments.Count; i++)
+            //    hough_visualization(segments[i], ref OutputImage, pixel_in_lines[i], square_index.Exists(x => x == i) ? Color.Blue : Color.Red);
+
+            ////VISUALIZE DOTS
+            //hough_visualize_crossing(crossing_coords, ref OutputImage);
+
+
+            // VISUALIZE square
             for (int i = 0; i < segments.Count; i++)
-                hough_visualization(segments[i], ref OutputImage, pixel_in_lines[i], square_index.Exists(x => x == i) ? Color.Blue : Color.Red);
+                if(square_index.Exists(x => x == i))
+                    hough_visualization(segments[i], ref OutputImage, pixel_in_lines[i], Color.Blue);
 
-            //VISUALIZE DOTS
-            hough_visualize_crossing(crossing_coords, ref OutputImage);
 
+            //Vertices of the parallel lines
             hough_visualize_crossing(vertices, ref OutputImage, false, Color.Orange);
 
+
+            //Blo
             hough_visualize_crossing(blobs, ref OutputImage, false, Color.YellowGreen);
 
             pictureBoxOut.Image = (Image)OutputImage;                         // display output image
