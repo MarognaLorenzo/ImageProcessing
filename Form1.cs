@@ -1,12 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Drawing;
 using System.Linq;
-using System.Net.Sockets;
+
 using System.Windows.Forms;
-using static System.Windows.Forms.LinkLabel;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.ToolTip;
+
 
 
 namespace INFOIBV
@@ -110,12 +108,12 @@ namespace INFOIBV
 
 
             // copy array to output Bitmap
-            List<(double, double)> lines = peakFinding(g_scale_image, THRESHOLD); // find lines
+            List<Line> lines = peakFinding(g_scale_image, THRESHOLD); // find lines
 
             List<List<Segment>> segments = new List<List<Segment>>();
             List<List<(int, int)>> pixel_in_lines = new List<List<(int, int)>>();
 
-            foreach ((double r, double theta) line in lines) // for every line detect segments and all pixel on that line ( for precision and easier computation)
+            foreach (Line line in lines) // for every line detect segments and all pixel on that line ( for precision and easier computation)
             {
                 (List<Segment> segmentsToAdd, List<(int, int)> pixels_on_line) = hough_line_detection(workingImage, line.r, line.theta, MINIMUM_THRESHOLD, MINIMUM_LENGHT, MAXIMUM_GAP);
                 Console.WriteLine("Line - r: " + line.r + "theta: " + line.theta);
@@ -123,7 +121,7 @@ namespace INFOIBV
                 pixel_in_lines.Add(pixels_on_line);
             }
 
-            List<(int, int)> crossing_coords = hough_crossing_line(lines, workingImage); // detect crossing points
+            List<PixelPoint> crossing_coords = hough_crossing_line(lines, workingImage); // detect crossing points
 
 
             OutputImage = new Bitmap(workingImage.GetLength(0), workingImage.GetLength(1)); // create new output image
@@ -176,24 +174,30 @@ namespace INFOIBV
             byte[,] contrast = adjustContrast(g_scale_image);
             byte[,] edge_image = edgeMagnitude(contrast, hSobelfilter, vSobelfilter);
             byte[,] workingImage = contrast;
-            List<(double, double)> lines = peakFinding(edge_image, THRESHOLD); // find peaks
+            List<Line> lines = peakFinding(edge_image, THRESHOLD); // find peaks
 
 
 
-            (List<(double, double)> square, List<int> square_index) = findSquare(lines, ref workingImage);
+            (List<Line> grid_lines, List<int> grid_lines_index) = findGrid(lines, ref workingImage);
 
-            List<(int, int)> vertices = hough_crossing_line(square, workingImage);
+
+            List<PixelPoint> vertices = hough_crossing_line(grid_lines, workingImage);
+
+            List<RectangularRegion> regions = identify_regions(grid_lines, grid_lines_index);
 
             // blob detection
-            List<(int x, int y)> blobs = new List<(int x, int y)>();
+            List<PixelPoint> blobs = new List<PixelPoint>();
             if (vertices.Count > 1)
             {
-                (int top, int right, int bottom, int left) region = region_square(vertices);
+                RectangularRegion region = region_square(vertices);
                 byte[,] crop = cropImage(contrast, region);
                 byte[,] reAdjust = adjustContrast(crop);
                 blobs = blobFinding(reAdjust, 0.2, ref workingImage);
                 for (int i = 0; i < blobs.Count; i++)
-                    blobs[i] = (blobs[i].x + region.left, blobs[i].y + region.bottom);
+                {
+                    blobs[i].x_shift(region.left);
+                    blobs[i].y_shift(region.bottom);
+                }
                 if (vertices.Count == 4)
                 {
                     if (blobs.Count < 2)
@@ -221,14 +225,14 @@ namespace INFOIBV
             List<List<Segment>> segments = new List<List<Segment>>();
             List<List<(int, int)>> pixel_in_lines = new List<List<(int, int)>>();
 
-            foreach ((double r, double theta) line in lines) // for every detected lines find segments and whole line ( easier for computation and precision)
+            foreach (Line line in lines) // for every detected lines find segments and whole line ( easier for computation and precision)
             {
                 (List<Segment> segmentsToAdd, List<(int, int)> pixels_on_line) = hough_line_detection(workingImage, line.r, line.theta, MINIMUM_THRESHOLD, MINIMUM_LENGHT, MAXIMUM_GAP);
                 segments.Add(segmentsToAdd);
                 pixel_in_lines.Add(pixels_on_line);
             }
 
-            List<(int, int)> crossing_coords = hough_crossing_line(lines, workingImage); // find crossing points
+            List<PixelPoint> crossing_coords = hough_crossing_line(lines, workingImage); // find crossing points
 
 
             OutputImage = new Bitmap(workingImage.GetLength(0), workingImage.GetLength(1)); // create new output image
@@ -253,7 +257,7 @@ namespace INFOIBV
 
             // VISUALIZE square
             for (int i = 0; i < segments.Count; i++)
-                if(square_index.Exists(x => x == i))
+                if(grid_lines_index.Exists(x => x == i))
                     hough_visualization(segments[i], ref OutputImage, pixel_in_lines[i], Color.Blue);
 
 
@@ -286,19 +290,19 @@ namespace INFOIBV
 
 
             // copy array to output Bitmap
-            List<(double, double)> lines = peakFinding(g_scale_image, THRESHOLD); // find peaks
+            List<Line> lines = peakFinding(g_scale_image, THRESHOLD); // find peaks
 
             List<List<Segment>> segments = new List<List<Segment>>();
             List<List<(int, int)>> pixel_in_lines = new List<List<(int, int)>>();
 
-            foreach ((double r, double theta) line in lines) // for every detected lines find segments and whole line ( easier for computation and precision)
+            foreach (Line line in lines) // for every detected lines find segments and whole line ( easier for computation and precision)
             {
                 (List<Segment> segmentsToAdd, List<(int, int)> pixels_on_line) = hough_line_detection(workingImage, line.r, line.theta, MINIMUM_THRESHOLD, MINIMUM_LENGHT, MAXIMUM_GAP);
                 segments.Add(segmentsToAdd);
                 pixel_in_lines.Add(pixels_on_line);
             }
 
-            List<(int, int)> crossing_coords = hough_crossing_line(lines, workingImage); // find crossing points
+            List<PixelPoint> crossing_coords = hough_crossing_line(lines, workingImage); // find crossing points
 
 
             OutputImage = new Bitmap(workingImage.GetLength(0), workingImage.GetLength(1)); // create new output image
@@ -573,10 +577,10 @@ namespace INFOIBV
             return tempImage;
         }
 
-        private byte[,] cropImage(byte[,] inputImage, (int top, int right, int bottom, int left) coords)
+        private byte[,] cropImage(byte[,] inputImage, RectangularRegion target)
         {
-            int top = coords.top; int right = coords.right; int bottom = coords.bottom;int left = coords.left;
-            byte[,] res = new byte[right - left, top - bottom];
+            byte[,] res = new byte[target.get_width(), target.get_height()];
+            (int top, int right, int bottom, int left) = target.get_tuple();
 
             for (int c = left; c < right; c++)
                 for (int r = bottom; r < top; r++)
@@ -1786,7 +1790,7 @@ namespace INFOIBV
         }
 
 
-        List<(double r, double theta)> peakFinding(byte[,] inputImage, double threshold)
+        List<Line> peakFinding(byte[,] inputImage, double threshold)
         {
             double maxR = Math.Sqrt(Math.Pow(inputImage.GetLength(0), 2) + Math.Pow(inputImage.GetLength(1), 2)); // half diagonal of the image
 
@@ -1809,18 +1813,18 @@ namespace INFOIBV
                 }
 
 
-            List<(double, double)> lines = new List<(double, double)>();
+            List<Line> lines = new List<Line>();
             foreach (var kv in map)// for each kea value in the dictionary with centroids sums and count of pixels get the average and add it to the result
             {
                 double T = ((double)kv.Value.sumx) / kv.Value.count * 180 / 500;
                 double R = (((double)kv.Value.sumy) / kv.Value.count * maxR / 500) - maxR / 2;
                 Console.WriteLine("R:" + R + " - T: " + T + "count:" + kv.Value.count);
-                lines.Add((R, T));
+                lines.Add(new Line(R, T));
             }
             return lines;
         }
 
-        List<(int x, int y)> blobFinding(byte[,] inputImage, double threshold, ref byte[,] workingImage)
+        List<PixelPoint> blobFinding(byte[,] inputImage, double threshold, ref byte[,] workingImage)
         {
 
             byte[,] thresholded = thresholdImage(inputImage, (int)(threshold * 255));
@@ -1842,13 +1846,13 @@ namespace INFOIBV
                 }
 
 
-            List<(int, int)> blobs = new List<(int, int)>();
+            List<PixelPoint> blobs = new List<PixelPoint>();
             foreach (var kv in map)// for each kea value in the dictionary with centroids sums and count of pixels get the average and add it to the result
             {
                 int x = kv.Value.sumx / kv.Value.count;
                 int y = kv.Value.sumy / kv.Value.count;
                 Console.WriteLine("Blob: x: " + x + " y: " + y);
-                blobs.Add((x, y));
+                blobs.Add(new PixelPoint(x, y));
             }
             return blobs;
         }
@@ -1983,17 +1987,17 @@ namespace INFOIBV
         *          r-theta pairs                    list of detected r   
         * output:                                   A List with the coords of crossing points of different lines
         */
-        List<(int, int)> hough_crossing_line(List<(double, double)> lines, byte[,] inputImage)
+        List<PixelPoint> hough_crossing_line(List<Line> lines, byte[,] inputImage)
         {
             (int c, int r) image_center = (inputImage.GetLength(0) / 2, inputImage.GetLength(1) / 2);
-            List<(int c, int r)> res = new List<(int, int)>();
+            List<PixelPoint> res = new List<PixelPoint>();
 
             for (int i = 0; i < lines.Count; i++)
             {
-                (double r, double theta) line1 = lines[i];
+                Line line1 = lines[i];
                 for (int j = i + 1; j < lines.Count; j++) // for every combination of lines
                 {
-                    (double r, double theta) line2 = lines[j];
+                    Line line2 = lines[j];
                     if (line1.theta == line2.theta) continue; // parallel lines do not have crossing points
 
                     // Detect crossing point
@@ -2029,7 +2033,7 @@ namespace INFOIBV
                     (int c, int r) pixel_coord = math_to_image(image_center, (x, (y < 0 ? y : y + 1))); // finding pixel coords in the image and check if the pixel is inside the boundaries of the image
                     if (pixel_coord.c < 0 || pixel_coord.c >= inputImage.GetLength(0) || pixel_coord.r < 0 || pixel_coord.r >= inputImage.GetLength(1)) continue;
 
-                    res.Add(pixel_coord);
+                    res.Add(new PixelPoint(pixel_coord.c, pixel_coord.r));
 
                 }
             }
@@ -2038,32 +2042,32 @@ namespace INFOIBV
 
         }
 
-        void hough_visualize_crossing(List<(int c, int r)> crossing_coords, ref Bitmap inputImage)
+        void hough_visualize_crossing(List<PixelPoint> crossing_coords, ref Bitmap inputImage)
         {
-            foreach ((int c, int r) point in crossing_coords) // visualize every crossing point with a plus-shaped marker
+            foreach (PixelPoint point in crossing_coords) // visualize every crossing point with a plus-shaped marker
             {
-                if (point.c < 0 || point.c >= inputImage.Width || point.r < 0 || point.r >= inputImage.Height) continue;
+                if (point.x < 0 || point.x >= inputImage.Width || point.y < 0 || point.y >= inputImage.Height) continue;
 
-                if (inputImage.GetPixel(point.c, point.r).R != 255) continue;
-                inputImage.SetPixel(point.c, point.r, Color.Green);
-                if (point.c + 1 < inputImage.Width) inputImage.SetPixel(point.c + 1, point.r, Color.Green);
-                if (point.c - 1 >= 0) inputImage.SetPixel(point.c - 1, point.r, Color.Green);
-                if (point.r + 1 < inputImage.Height) inputImage.SetPixel(point.c, point.r + 1, Color.Green);
-                if (point.r - 1 >= 0) inputImage.SetPixel(point.c, point.r - 1, Color.Green);
+                if (inputImage.GetPixel(point.x, point.y).R != 255) continue;
+                inputImage.SetPixel(point.x, point.y, Color.Green);
+                if (point.x + 1 < inputImage.Width) inputImage.SetPixel(point.x + 1, point.y, Color.Green);
+                if (point.x - 1 >= 0) inputImage.SetPixel(point.x - 1, point.y, Color.Green);
+                if (point.y + 1 < inputImage.Height) inputImage.SetPixel(point.x, point.y + 1, Color.Green);
+                if (point.y - 1 >= 0) inputImage.SetPixel(point.x, point.y - 1, Color.Green);
             }
         }
-        void hough_visualize_crossing(List<(int c, int r)> crossing_coords, ref Bitmap inputImage, bool only_on_segment, Color color)
+        void hough_visualize_crossing(List<PixelPoint> crossing_coords, ref Bitmap inputImage, bool only_on_segment, Color color)
         {
-            foreach ((int c, int r) point in crossing_coords) // visualize every crossing point with a plus-shaped marker
+            foreach (PixelPoint point in crossing_coords) // visualize every crossing point with a plus-shaped marker
             {
-                if (point.c < 0 || point.c >= inputImage.Width || point.r < 0 || point.r >= inputImage.Height) continue;
+                if (point.x < 0 || point.x >= inputImage.Width || point.y < 0 || point.y >= inputImage.Height) continue;
 
-                if (only_on_segment && inputImage.GetPixel(point.c, point.r).R != 255) continue;
-                inputImage.SetPixel(point.c, point.r, color);
-                if (point.c + 1 < inputImage.Width) inputImage.SetPixel(point.c + 1, point.r, color);
-                if (point.c - 1 >= 0) inputImage.SetPixel(point.c - 1, point.r, color);
-                if (point.r + 1 < inputImage.Height) inputImage.SetPixel(point.c, point.r + 1, color);
-                if (point.r - 1 >= 0) inputImage.SetPixel(point.c, point.r - 1, color);
+                if (only_on_segment && inputImage.GetPixel(point.x, point.y).R != 255) continue;
+                inputImage.SetPixel(point.x, point.y, color);
+                if (point.x + 1 < inputImage.Width) inputImage.SetPixel(point.x + 1, point.y, color);
+                if (point.x - 1 >= 0) inputImage.SetPixel(point.x - 1, point.y, color);
+                if (point.y + 1 < inputImage.Height) inputImage.SetPixel(point.x, point.y + 1, color);
+                if (point.y - 1 >= 0) inputImage.SetPixel(point.x, point.y - 1, color);
             }
         }
 
@@ -2130,26 +2134,6 @@ namespace INFOIBV
             return (image_center.c + (int)xy.x, image_center.r - (int)xy.y);
         }
 
-        internal enum SEShape
-        {
-            Square,
-            Plus
-        }
-
-        public struct Segment
-        {
-            public (int c, int r) start;
-            public (int c, int r) end;
-            public void clear()
-            {
-                this.start = this.end = (-1, -1);
-            }
-            public void set_start((int, int) start)
-            {
-                this.start = start;
-
-            }
-        }
         int[,] HoughCircles(byte[,] inputImage, int r)
         {
             int[,] temp = new int[inputImage.GetLength(0), inputImage.GetLength(1)];
@@ -2216,38 +2200,33 @@ namespace INFOIBV
             }
         }
 
-        private (int top, int right, int bottom, int left) region_square(List<(int x, int y)> vertices)
+        private RectangularRegion region_square(List<PixelPoint> vertices)
         {
             if (vertices.Count == 0) throw new Exception("No vertices");
-            int top = vertices[0].y;
-            int bottom = vertices[0].y;
-            int left = vertices[0].x;
-            int right = vertices[0].x;
-            foreach ((int x, int y) point in vertices)
+            RectangularRegion region = new RectangularRegion();
+            foreach (PixelPoint point in vertices)
             {
-                top = Math.Max(top, point.y);
-                bottom = Math.Min(bottom, point.y);
-                left = Math.Min(left, point.x);
-                right = Math.Max(right, point.x);
+                region.top = Math.Max(region.top, point.y);
+                region.bottom = Math.Min(region.bottom, point.y);
+                region.left = Math.Min(region.left, point.x);
+                region.right = Math.Max(region.right, point.x);
             }
-            return (top, right, bottom, left);
+            return region;
         }
 
-        (List<(double, double)> square, List<int> square_index) findSquare(List<(double r, double theta)> lines, ref byte[,] workingImage)
+        (List<Line> grid, List<int> grid_index) findGrid(List<Line> lines, ref byte[,] workingImage)
         {
-            ICollection<(double, double)> pairable_lines = new HashSet<(double, double)>();
+            ICollection<Line> pairable_lines = new HashSet<Line>();
             ICollection<int> pairable_lines_index = new HashSet<int>();
-
-            List<double> used_thetas = new List<double>();
 
             for (int i = 0; i < lines.Count; i++)
             {
-                (double r, double theta) line1 = lines[i];
+                Line line1 = lines[i];
                 if (pairable_lines.Any(line_in_square => areAlmostSame(line_in_square, line1))) continue;
 
                 for (int j = i + 1; j < lines.Count; j++)
                 {
-                    (double r, double theta) line2 = lines[j];
+                    Line line2 = lines[j];
                     if (pairable_lines.Any(line_in_square => areAlmostSame(line_in_square, line2))) continue;
                     
                     if (areDistantParallel(line1, line2))
@@ -2257,10 +2236,10 @@ namespace INFOIBV
                         pairable_lines.Add(line2);
                         pairable_lines_index.Add(j);
                         pairable_lines_index.Add(i);
-                        used_thetas.Add((line1.theta + line2.theta) / 2);
                     }
                 }
             }
+            // Only lines with a parallel buddy distant from the line itself
             pairable_lines = pairable_lines.ToList();
             pairable_lines_index = pairable_lines_index.ToList();
 
@@ -2270,10 +2249,10 @@ namespace INFOIBV
 
             for (int i = 0; i < pairable_lines.Count; i++)
             {
-                (double r, double theta) line1 = lines[i];
+                Line line1 = lines[i];
                 for (int j = i + 1; j < pairable_lines.Count; j++)
                 {
-                    (double r, double theta) line2 = lines[j];
+                    Line line2 = lines[j];
                     if(areAlmostParallel(line1, line2) || AreAlmostPerpendicular(line1, line2))
                     {
                         accum[pairable_lines_index.ElementAt(i)] += 1;
@@ -2286,22 +2265,18 @@ namespace INFOIBV
             List<int> chosen_index = new List<int>();
 
             for (int i = 0; i < pairable_lines.Count; i++)
-            {
                 if (accum[i] == max)
-                {
                     chosen_index.Add(i);
-                }
-            }
 
-            List<(double, double)> result = new List<(double, double)>();
-            foreach(int index in chosen_index)
-                result.Add(lines[index]);
+
+            List<Line> result = new List<Line>();
+
+            foreach(int index in chosen_index) result.Add(lines[index]);
             
-
             return (result, chosen_index);
         }
 
-        private bool areAlmostSame((double r, double theta) line1, (double r, double theta) line2)
+        private bool areAlmostSame(Line line1, Line line2)
         {
             double diff = Math.Abs(line1.theta - line2.theta);
             if (diff < 5 && Math.Abs(line1.r - line2.r) < 4) return true;
@@ -2309,13 +2284,13 @@ namespace INFOIBV
 
             return false;
         }
-        private bool AreAlmostPerpendicular((double r, double theta) line1, (double r, double theta) line2)
+        private bool AreAlmostPerpendicular(Line line1, Line line2)
         {
             double diff = Math.Abs(line1.theta - line2.theta);
             if (85 < diff && diff  < 95) return true;
             return false;
         }
-        private bool areDistantParallel((double r, double theta) line1, (double r, double theta) line2)
+        private bool areDistantParallel(Line line1, Line line2)
         {
             double diff = Math.Abs(line1.theta - line2.theta);
             if (diff < 5 && Math.Abs(line1.r - line2.r) > 25) return true;
@@ -2323,11 +2298,84 @@ namespace INFOIBV
             return false;
         }
 
-        private bool areAlmostParallel((double r, double theta) line1, (double r, double theta) line2)
+        private bool areAlmostParallel(Line line1, Line line2)
         {
             double diff = Math.Abs(line1.theta - line2.theta);
             if (diff < 5 || diff > 175) return true;
             return false;
+        }
+        private List<RectangularRegion> identify_regions(List<Line> grid_lines, List<int> grid_lines_index)
+        {
+            throw new NotImplementedException();
+        }
+
+        internal enum SEShape
+        {
+            Square,
+            Plus
+        }
+
+        private struct Segment
+        {
+            public (int c, int r) start;
+            public (int c, int r) end;
+            public void clear()
+            {
+                this.start = this.end = (-1, -1);
+            }
+            public void set_start((int, int) start)
+            {
+                this.start = start;
+
+            }
+        }
+
+        private struct RectangularRegion
+        {
+            public int top;
+            public int bottom;
+            public int right;
+            public int left;
+            public int get_height()
+            {
+                return this.top - this.bottom;
+            }
+            public int get_width()
+            {
+                return this.right - this.left;
+            }
+            public (int top, int right, int bottom, int left) get_tuple()
+            {
+                return (top, right, bottom, left);
+            }
+        }
+        private struct Line
+        {
+            public double theta;
+            public double r;
+            public Line(double r, double theta)
+            {
+                this.theta = theta;
+                this.r = r;
+            }
+        }
+        private struct PixelPoint
+        {
+            public int x { get; set; }
+            public int y { get; set; }
+            public PixelPoint(int x, int y)
+            {
+                this.x = x;
+                this.y = y;
+            }
+            public void x_shift(int shift)
+            {
+                this.x += shift;
+            }
+            public void y_shift(int shift)
+            {
+                this.y += shift;
+            }
         }
     }
 }
