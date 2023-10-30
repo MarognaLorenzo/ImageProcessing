@@ -155,121 +155,6 @@ namespace INFOIBV
 
         }
 
-        private void FindSocketClick(object sender, EventArgs e)
-        {
-            bool detectedSocket = false;
-            if (InputImage1 == null) return;                                 // get out if no input image
-            if (OutputImage != null) OutputImage.Dispose();                 // reset output image
-            OutputImage = new Bitmap(InputImage1.Size.Width, InputImage1.Size.Height); // create new output image
-            Color[,] Image = new Color[InputImage1.Size.Width, InputImage1.Size.Height]; // create array to speed-up operations (Bitmap functions are very slow)
-
-            // copy input Bitmap to array            
-            for (int x = 0; x < InputImage1.Size.Width; x++)                 // loop over columns
-                for (int y = 0; y < InputImage1.Size.Height; y++)            // loop over rows
-                    Image[x, y] = InputImage1.GetPixel(x, y);                // set pixel color in array at (x,y)
-
-
-            byte[,] g_scale_image = convertToGrayscale(Image);          // convert image to grayscale
-            byte[,] contrast = adjustContrast(g_scale_image);
-            byte[,] edge_image = edgeMagnitude(contrast, hSobelfilter, vSobelfilter);
-            byte[,] workingImage = contrast;
-            List<Line> lines = peakFinding(edge_image, THRESHOLD); // find peaks
-
-
-
-            (List<Line> grid_lines, List<int> grid_lines_index) = findGrid(lines, ref workingImage);
-
-
-            List<PixelPoint> vertices = hough_crossing_line(grid_lines, workingImage);
-
-            List<RectangularRegion> regions = identify_regions(grid_lines, grid_lines_index);
-
-            // blob detection
-            List<PixelPoint> blobs = new List<PixelPoint>();
-            if (vertices.Count > 1)
-            {
-                RectangularRegion region = region_square(vertices);
-                byte[,] crop = cropImage(contrast, region);
-                byte[,] reAdjust = adjustContrast(crop);
-                blobs = blobFinding(reAdjust, 0.2, ref workingImage);
-                for (int i = 0; i < blobs.Count; i++)
-                {
-                    blobs[i].x_shift(region.left);
-                    blobs[i].y_shift(region.bottom);
-                }
-                if (vertices.Count == 4)
-                {
-                    if (blobs.Count < 2)
-                    {
-                        Console.WriteLine("Socket not found");
-                        return;
-                    }
-                    if (blobs.Count == 3 || blobs.Count == 2)
-                    {
-                        if( blobs.All(bl => Math.Abs(bl.x - blobs[0].x) < 3) || blobs.All(bl => Math.Abs(bl.y - blobs[0].y) < 3))
-                        {
-                            detectedSocket = true;
-                            Console.WriteLine("Socket found");
-                        }
-                    }
-
-
-                }
-
-
-            }
-
-
-
-            List<List<Segment>> segments = new List<List<Segment>>();
-            List<List<(int, int)>> pixel_in_lines = new List<List<(int, int)>>();
-
-            foreach (Line line in lines) // for every detected lines find segments and whole line ( easier for computation and precision)
-            {
-                (List<Segment> segmentsToAdd, List<(int, int)> pixels_on_line) = hough_line_detection(workingImage, line.r, line.theta, MINIMUM_THRESHOLD, MINIMUM_LENGHT, MAXIMUM_GAP);
-                segments.Add(segmentsToAdd);
-                pixel_in_lines.Add(pixels_on_line);
-            }
-
-            List<PixelPoint> crossing_coords = hough_crossing_line(lines, workingImage); // find crossing points
-
-
-            OutputImage = new Bitmap(workingImage.GetLength(0), workingImage.GetLength(1)); // create new output image
-
-            // copy array to output Bitmap
-            for (
-
-                int x = 0; x < workingImage.GetLength(0); x++)             // loop over columns
-                for (int y = 0; y < workingImage.GetLength(1); y++)         // loop over rows
-                {
-                    Color newColor = Color.FromArgb(workingImage[x, y], workingImage[x, y], workingImage[x, y]);
-                    OutputImage.SetPixel(x, y, newColor);                  // set the pixel color at coordinate (x,y)
-                }
-
-            //// VISUALIZE LINES
-            //for (int i = 0; i < segments.Count; i++)
-            //    hough_visualization(segments[i], ref OutputImage, pixel_in_lines[i], square_index.Exists(x => x == i) ? Color.Blue : Color.Red);
-
-            ////VISUALIZE DOTS
-            //hough_visualize_crossing(crossing_coords, ref OutputImage);
-
-
-            // VISUALIZE square
-            for (int i = 0; i < segments.Count; i++)
-                if(grid_lines_index.Exists(x => x == i))
-                    hough_visualization(segments[i], ref OutputImage, pixel_in_lines[i], Color.Blue);
-
-
-            //Vertices of the parallel lines
-            hough_visualize_crossing(vertices, ref OutputImage, false, Color.Orange);
-
-
-            //Blo
-            hough_visualize_crossing(blobs, ref OutputImage, false, Color.YellowGreen);
-
-            pictureBoxOut.Image = (Image)OutputImage;                         // display output image
-
-        }
 
         private void LineDetectionClick(object sender, EventArgs e)
         {
@@ -543,6 +428,121 @@ namespace INFOIBV
                 OutputImage.Save(saveImageDialog.FileName);                 // save the output image
         }
 
+        private void FindSocketClick(object sender, EventArgs e)
+        {
+            bool detectedSocket = false;
+            if (InputImage1 == null) return;                                 // get out if no input image
+            if (OutputImage != null) OutputImage.Dispose();                 // reset output image
+            OutputImage = new Bitmap(InputImage1.Size.Width, InputImage1.Size.Height); // create new output image
+            Color[,] Image = new Color[InputImage1.Size.Width, InputImage1.Size.Height]; // create array to speed-up operations (Bitmap functions are very slow)
+
+            // copy input Bitmap to array            
+            for (int x = 0; x < InputImage1.Size.Width; x++)                 // loop over columns
+                for (int y = 0; y < InputImage1.Size.Height; y++)            // loop over rows
+                    Image[x, y] = InputImage1.GetPixel(x, y);                // set pixel color in array at (x,y)
+
+
+            byte[,] g_scale_image = convertToGrayscale(Image);          // convert image to grayscale
+            byte[,] contrast = adjustContrast(g_scale_image);
+            byte[,] edge_image = edgeMagnitude(contrast, hSobelfilter, vSobelfilter);
+            byte[,] workingImage = contrast;
+            List<Line> lines = peakFinding(edge_image, THRESHOLD); // find peaks
+
+
+
+            (List<Line> grid_lines, List<int> grid_lines_index) = findGrid(lines, ref workingImage);
+
+
+            List<PixelPoint> vertices = hough_crossing_line(grid_lines, workingImage);
+
+            List<RectangularRegion> regions = identify_regions(grid_lines, grid_lines_index);
+
+            // blob detection
+            List<PixelPoint> blobs = new List<PixelPoint>();
+            if (vertices.Count > 1)
+            {
+                RectangularRegion region = region_square(vertices);
+                byte[,] crop = cropImage(contrast, region);
+                byte[,] reAdjust = adjustContrast(crop);
+                blobs = blobFinding(reAdjust, 0.2, ref workingImage);
+                for (int i = 0; i < blobs.Count; i++)
+                {
+                    blobs[i].x_shift(region.left);
+                    blobs[i].y_shift(region.bottom);
+                }
+                if (vertices.Count == 4)
+                {
+                    if (blobs.Count < 2)
+                    {
+                        Console.WriteLine("Socket not found");
+                        return;
+                    }
+                    if (blobs.Count == 3 || blobs.Count == 2)
+                    {
+                        if( blobs.All(bl => Math.Abs(bl.x - blobs[0].x) < 3) || blobs.All(bl => Math.Abs(bl.y - blobs[0].y) < 3))
+                        {
+                            detectedSocket = true;
+                            Console.WriteLine("Socket found");
+                        }
+                    }
+
+
+                }
+
+
+            }
+
+
+
+            List<List<Segment>> segments = new List<List<Segment>>();
+            List<List<(int, int)>> pixel_in_lines = new List<List<(int, int)>>();
+
+            foreach (Line line in lines) // for every detected lines find segments and whole line ( easier for computation and precision)
+            {
+                (List<Segment> segmentsToAdd, List<(int, int)> pixels_on_line) = hough_line_detection(workingImage, line.r, line.theta, MINIMUM_THRESHOLD, MINIMUM_LENGHT, MAXIMUM_GAP);
+                segments.Add(segmentsToAdd);
+                pixel_in_lines.Add(pixels_on_line);
+            }
+
+            List<PixelPoint> crossing_coords = hough_crossing_line(lines, workingImage); // find crossing points
+
+
+            OutputImage = new Bitmap(workingImage.GetLength(0), workingImage.GetLength(1)); // create new output image
+
+            // copy array to output Bitmap
+            for (
+
+                int x = 0; x < workingImage.GetLength(0); x++)             // loop over columns
+                for (int y = 0; y < workingImage.GetLength(1); y++)         // loop over rows
+                {
+                    Color newColor = Color.FromArgb(workingImage[x, y], workingImage[x, y], workingImage[x, y]);
+                    OutputImage.SetPixel(x, y, newColor);                  // set the pixel color at coordinate (x,y)
+                }
+
+            //// VISUALIZE LINES
+            //for (int i = 0; i < segments.Count; i++)
+            //    hough_visualization(segments[i], ref OutputImage, pixel_in_lines[i], square_index.Exists(x => x == i) ? Color.Blue : Color.Red);
+
+            ////VISUALIZE DOTS
+            //hough_visualize_crossing(crossing_coords, ref OutputImage);
+
+
+            // VISUALIZE square
+            for (int i = 0; i < segments.Count; i++)
+                if(grid_lines_index.Exists(x => x == i))
+                    hough_visualization(segments[i], ref OutputImage, pixel_in_lines[i], Color.Blue);
+
+
+            //Vertices of the parallel lines
+            hough_visualize_crossing(vertices, ref OutputImage, false, Color.Orange);
+
+
+            //Blo
+            hough_visualize_crossing(blobs, ref OutputImage, false, Color.YellowGreen);
+
+            pictureBoxOut.Image = (Image)OutputImage;                         // display output image
+
+        }
         private byte[,] cropImage(byte[,] inputImage, RectangularRegion target)
         {
             byte[,] res = new byte[target.get_width(), target.get_height()];
@@ -552,21 +552,6 @@ namespace INFOIBV
                 for (int r = bottom; r < top; r++)
                     res[c - left, r - bottom] = inputImage[c, r];
             return res;
-        }
-
-
-        /*
-        * isBinary: takes as input a single channel image and return true only if all values of the image are either 0 or 255
-        * input:   inputImage          single channel  image
-        * output:                      bool value, true if image is binary
-        */
-        bool isBinary(byte[,] inputImage)
-        {
-            for (int c = 0; c < inputImage.GetLength(0); c++)
-                for (int r = 0; r < inputImage.GetLength(1); r++)
-                    if (inputImage[c, r] != 0 && inputImage[c, r] != 255)
-                        return false;
-            return true;
         }
 
         List<PixelPoint> blobFinding(byte[,] inputImage, double threshold, ref byte[,] workingImage)
@@ -602,28 +587,10 @@ namespace INFOIBV
             return blobs;
         }
 
-        double degree_to_rad(double degree)
+        private List<RectangularRegion> identify_regions(List<Line> grid_lines, List<int> grid_lines_index)
         {
-            return degree * Math.PI / 180;
+            throw new NotImplementedException();
         }
-
-        /*
-         * math_to_image: converts some coordinates from the mathematical space to the image coordinates, using the position of the center of the image
-         */
-        (int, int) math_to_image((int c, int r) image_center, (double x, double y) xy)
-        {
-            return (image_center.c + (int)xy.x, image_center.r - (int)xy.y);
-        }
-
-
-        private void NumberBox_KeyPress(object sender, KeyPressEventArgs e)
-        {
-            if (!char.IsControl(e.KeyChar) && !char.IsDigit(e.KeyChar))
-            {
-                e.Handled = true;
-            }
-        }
-
         private RectangularRegion region_square(List<PixelPoint> vertices)
         {
             if (vertices.Count == 0) throw new Exception("No vertices");
@@ -700,6 +667,46 @@ namespace INFOIBV
             return (result, chosen_index);
         }
 
+
+        /*
+        * isBinary: takes as input a single channel image and return true only if all values of the image are either 0 or 255
+        * input:   inputImage          single channel  image
+        * output:                      bool value, true if image is binary
+        */
+        bool isBinary(byte[,] inputImage)
+        {
+            for (int c = 0; c < inputImage.GetLength(0); c++)
+                for (int r = 0; r < inputImage.GetLength(1); r++)
+                    if (inputImage[c, r] != 0 && inputImage[c, r] != 255)
+                        return false;
+            return true;
+        }
+
+
+        double degree_to_rad(double degree)
+        {
+            return degree * Math.PI / 180;
+        }
+
+        /*
+         * math_to_image: converts some coordinates from the mathematical space to the image coordinates, using the position of the center of the image
+         */
+        (int, int) math_to_image((int c, int r) image_center, (double x, double y) xy)
+        {
+            return (image_center.c + (int)xy.x, image_center.r - (int)xy.y);
+        }
+
+
+        private void NumberBox_KeyPress(object sender, KeyPressEventArgs e)
+        {
+            if (!char.IsControl(e.KeyChar) && !char.IsDigit(e.KeyChar))
+            {
+                e.Handled = true;
+            }
+        }
+
+
+
         private bool areAlmostSame(Line line1, Line line2)
         {
             double diff = Math.Abs(line1.theta - line2.theta);
@@ -727,10 +734,6 @@ namespace INFOIBV
             double diff = Math.Abs(line1.theta - line2.theta);
             if (diff < 5 || diff > 175) return true;
             return false;
-        }
-        private List<RectangularRegion> identify_regions(List<Line> grid_lines, List<int> grid_lines_index)
-        {
-            throw new NotImplementedException();
         }
 
         internal enum SEShape
