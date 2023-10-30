@@ -455,13 +455,13 @@ namespace INFOIBV
 
             List<PixelPoint> vertices = hough_crossing_line(grid_lines, workingImage);
 
-            List<RectangularRegion> regions = identify_regions(grid_lines, grid_lines_index);
+            List<RectangularRegion> regions = identify_regions(grid_lines, grid_lines_index, ref workingImage);
 
             // blob detection
             List<PixelPoint> blobs = new List<PixelPoint>();
             if (vertices.Count > 1)
             {
-                RectangularRegion region = region_square(vertices);
+                RectangularRegion region = new RectangularRegion(vertices);
                 byte[,] crop = cropImage(contrast, region);
                 byte[,] reAdjust = adjustContrast(crop);
                 blobs = blobFinding(reAdjust, 0.2, ref workingImage);
@@ -536,6 +536,10 @@ namespace INFOIBV
             //Vertices of the parallel lines
             hough_visualize_crossing(vertices, ref OutputImage, false, Color.Orange);
 
+            //foreach (RectangularRegion region in regions)
+            //    hough_visualize_crossing(region.get_creation_point(), ref OutputImage, false, Color.Red);
+
+
 
             //Blo
             hough_visualize_crossing(blobs, ref OutputImage, false, Color.YellowGreen);
@@ -587,23 +591,50 @@ namespace INFOIBV
             return blobs;
         }
 
-        private List<RectangularRegion> identify_regions(List<Line> grid_lines, List<int> grid_lines_index)
+        private List<RectangularRegion> identify_regions(List<Line> grid_lines, List<int> grid_lines_index, ref byte[,] workinImage)
         {
-            throw new NotImplementedException();
-        }
-        private RectangularRegion region_square(List<PixelPoint> vertices)
-        {
-            if (vertices.Count == 0) throw new Exception("No vertices");
-            RectangularRegion region = new RectangularRegion();
-            foreach (PixelPoint point in vertices)
+            if (grid_lines.Count == 0) return new List<RectangularRegion>();
+
+            // dbsscan
+            List<Line> axis1 = new List<Line> { grid_lines[0] };
+            List<Line> axis2 = new List<Line>();
+            List<RectangularRegion> res = new List<RectangularRegion>();
+            foreach (Line line in grid_lines.Skip(1))
             {
-                region.top = Math.Max(region.top, point.y);
-                region.bottom = Math.Min(region.bottom, point.y);
-                region.left = Math.Min(region.left, point.x);
-                region.right = Math.Max(region.right, point.x);
+                if (axis1.Any(horixontal_line => horixontal_line.isAlmostParallelWith(line))) axis1.Add(line);
+                else axis2.Add(line);
             }
-            return region;
+
+            List<Line> h_lines;
+            List<Line> v_lines;
+            double avg1 = axis1.Select(single_line => single_line.theta).Average();
+            h_lines = avg1 < 45 || avg1 > 135 ? axis1 : axis2;
+            v_lines = avg1 < 45 || avg1 > 135 ? axis2 : axis1;
+
+            h_lines = h_lines.OrderBy(line => line.r).ToList();
+            v_lines = v_lines.OrderBy(line => line.r).Reverse().ToList();
+            List<Line> lines_to_use = new List<Line> {v_lines[0] };
+
+            for (int i = 0; i < v_lines.Count - 1; i++)
+            {
+                lines_to_use.Add(v_lines[i + 1]);
+                lines_to_use.Add(h_lines[0]);
+                for (int j = 0; j < h_lines.Count -1; j++)
+                {
+                    lines_to_use.Add(h_lines[j + 1]);
+
+                    List<PixelPoint> rectangle_vertices = hough_crossing_line(lines_to_use, workinImage);
+                    if(rectangle_vertices.Count == 4) res.Add(new RectangularRegion(rectangle_vertices));
+
+                    if(!lines_to_use.Remove(h_lines[j])) throw new Exception("element not found");
+                    
+                }
+                lines_to_use.Remove(h_lines[h_lines.Count - 1]);
+                if(!lines_to_use.Remove(v_lines[i])) throw new Exception("element not found");
+            }
+            return res;
         }
+
 
         (List<Line> grid, List<int> grid_index) findGrid(List<Line> lines, ref byte[,] workingImage)
         {
@@ -613,14 +644,14 @@ namespace INFOIBV
             for (int i = 0; i < lines.Count; i++)
             {
                 Line line1 = lines[i];
-                if (pairable_lines.Any(line_in_square => areAlmostSame(line_in_square, line1))) continue;
-
+                if (pairable_lines.Any(line_in_square => line_in_square.isAlmostSameAs(line1))) continue;
+            
                 for (int j = i + 1; j < lines.Count; j++)
                 {
                     Line line2 = lines[j];
-                    if (pairable_lines.Any(line_in_square => areAlmostSame(line_in_square, line2))) continue;
+                    if (pairable_lines.Any(line_in_square => line_in_square.isAlmostSameAs(line2))) continue;
                     
-                    if (areDistantParallel(line1, line2))
+                    if (line1.isDistantParallelWith(line2))
                     {
                         Console.WriteLine("Parallel line: " + line1.ToString() + "with " + line2.ToString());
                         pairable_lines.Add(line1);
@@ -644,7 +675,7 @@ namespace INFOIBV
                 for (int j = i + 1; j < pairable_lines.Count; j++)
                 {
                     Line line2 = lines[j];
-                    if(areAlmostParallel(line1, line2) || AreAlmostPerpendicular(line1, line2))
+                    if(line1.isAlmostParallelWith(line2) || line1.isAlmostPerpendicularWith(line2))
                     {
                         accum[pairable_lines_index.ElementAt(i)] += 1;
                         accum[pairable_lines_index.ElementAt(j)] += 1;
@@ -706,36 +737,6 @@ namespace INFOIBV
         }
 
 
-
-        private bool areAlmostSame(Line line1, Line line2)
-        {
-            double diff = Math.Abs(line1.theta - line2.theta);
-            if (diff < 5 && Math.Abs(line1.r - line2.r) < 4) return true;
-            if (diff > 175 && Math.Abs(line1.r + line2.r) < 5) return true;
-
-            return false;
-        }
-        private bool AreAlmostPerpendicular(Line line1, Line line2)
-        {
-            double diff = Math.Abs(line1.theta - line2.theta);
-            if (85 < diff && diff  < 95) return true;
-            return false;
-        }
-        private bool areDistantParallel(Line line1, Line line2)
-        {
-            double diff = Math.Abs(line1.theta - line2.theta);
-            if (diff < 5 && Math.Abs(line1.r - line2.r) > 25) return true;
-            if (diff > 175 && Math.Abs(line1.r + line2.r) > 25) return true;
-            return false;
-        }
-
-        private bool areAlmostParallel(Line line1, Line line2)
-        {
-            double diff = Math.Abs(line1.theta - line2.theta);
-            if (diff < 5 || diff > 175) return true;
-            return false;
-        }
-
         internal enum SEShape
         {
             Square,
@@ -763,6 +764,8 @@ namespace INFOIBV
             public int bottom;
             public int right;
             public int left;
+
+            private List<PixelPoint> creation_points;
             public int get_height()
             {
                 return this.top - this.bottom;
@@ -775,6 +778,25 @@ namespace INFOIBV
             {
                 return (top, right, bottom, left);
             }
+
+            public RectangularRegion (List<PixelPoint> vertices)
+            {
+                if (vertices.Count == 0) throw new Exception("No vertices");
+                this.top = this.bottom = vertices[0].y;
+                this.right = this.left = vertices[1].x;
+                this.creation_points = vertices;
+                foreach (PixelPoint point in vertices)
+                {
+                    this.top = Math.Max(this.top, point.y);
+                    this.bottom = Math.Min(this.bottom, point.y);
+                    this.left = Math.Min(this.left, point.x);
+                    this.right = Math.Max(this.right, point.x);
+                }
+            }
+            public List<PixelPoint> get_creation_point()
+            {
+                return creation_points;
+            }
         }
         private struct Line
         {
@@ -785,6 +807,39 @@ namespace INFOIBV
                 this.theta = theta;
                 this.r = r;
             }
+            public double get_diff(Line l2)
+            {
+                double abs_diff = Math.Abs(l2.theta - this.theta);
+                return abs_diff <= 90 ? abs_diff : (360 - 2 * abs_diff) / 2;
+            }
+            public bool isAlmostSameAs(Line line1)
+            {
+                double diff = Math.Abs(line1.theta - this.theta);
+                if (diff < 5 && Math.Abs(line1.r - this.r) < 4) return true;
+                if (diff > 175 && Math.Abs(line1.r + this.r) < 5) return true;
+
+                return false;
+            }
+            public bool isAlmostParallelWith(Line line1)
+            {
+                return this.get_diff(line1) < 5;
+            }
+            public bool isAlmostPerpendicularWith(Line line1)
+            {
+                double diff = this.get_diff(line1);
+                if (85 < diff && diff < 95) return true;
+                return false;
+            }
+            public bool isDistantParallelWith(Line line1)
+            {
+                double diff = Math.Abs(line1.theta - this.theta);
+                if (diff < 5 && Math.Abs(line1.r - this.r) > 25) return true;
+                if (diff > 175 && Math.Abs(line1.r + this.r) > 25) return true;
+                return false;
+            }
+
+
+
         }
         private struct PixelPoint
         {
@@ -797,11 +852,11 @@ namespace INFOIBV
             }
             public void x_shift(int shift)
             {
-                this.x += shift;
+                x += shift;
             }
             public void y_shift(int shift)
             {
-                this.y += shift;
+                y += shift;
             }
         }
     }
