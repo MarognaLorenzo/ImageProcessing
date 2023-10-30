@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Drawing;
 using System.Linq;
 using System.Net.Sockets;
@@ -2234,36 +2235,70 @@ namespace INFOIBV
 
         (List<(double, double)> square, List<int> square_index) findSquare(List<(double r, double theta)> lines, ref byte[,] workingImage)
         {
-            List<(double, double)> square = new List<(double, double)>();
-            List<int> square_index = new List<int>();
-
-
-            //List<var> parallel_lines = new List<var>();
+            ICollection<(double, double)> pairable_lines = new HashSet<(double, double)>();
+            ICollection<int> pairable_lines_index = new HashSet<int>();
 
             List<double> used_thetas = new List<double>();
 
             for (int i = 0; i < lines.Count; i++)
             {
                 (double r, double theta) line1 = lines[i];
-                if (square.Exists(line_in_square => areAlmostSame(line_in_square, line1))) continue;
+                if (pairable_lines.Any(line_in_square => areAlmostSame(line_in_square, line1))) continue;
 
                 for (int j = i + 1; j < lines.Count; j++)
                 {
                     (double r, double theta) line2 = lines[j];
-                    if (square.Exists(line_in_square => areAlmostSame(line_in_square, line2))) continue;
+                    if (pairable_lines.Any(line_in_square => areAlmostSame(line_in_square, line2))) continue;
                     
                     if (areDistantParallel(line1, line2))
                     {
                         Console.WriteLine("Parallel line: " + line1.ToString() + "with " + line2.ToString());
-                        square.Add(line1);
-                        square.Add(line2);
-                        square_index.Add(i);
-                        square_index.Add(j);
+                        pairable_lines.Add(line1);
+                        pairable_lines.Add(line2);
+                        pairable_lines_index.Add(j);
+                        pairable_lines_index.Add(i);
                         used_thetas.Add((line1.theta + line2.theta) / 2);
                     }
                 }
             }
-            return (square, square_index);
+            pairable_lines = pairable_lines.ToList();
+            pairable_lines_index = pairable_lines_index.ToList();
+
+
+            List<int> accum = new List<int> (lines.Count);
+            while (accum.Count < accum.Capacity) accum.Add(0);
+
+            for (int i = 0; i < pairable_lines.Count; i++)
+            {
+                (double r, double theta) line1 = lines[i];
+                for (int j = i + 1; j < pairable_lines.Count; j++)
+                {
+                    (double r, double theta) line2 = lines[j];
+                    if(areAlmostParallel(line1, line2) || AreAlmostPerpendicular(line1, line2))
+                    {
+                        accum[pairable_lines_index.ElementAt(i)] += 1;
+                        accum[pairable_lines_index.ElementAt(j)] += 1;
+                    }
+                }
+            }
+
+            int max = accum.Max();
+            List<int> chosen_index = new List<int>();
+
+            for (int i = 0; i < pairable_lines.Count; i++)
+            {
+                if (accum[i] == max)
+                {
+                    chosen_index.Add(i);
+                }
+            }
+
+            List<(double, double)> result = new List<(double, double)>();
+            foreach(int index in chosen_index)
+                result.Add(lines[index]);
+            
+
+            return (result, chosen_index);
         }
 
         private bool areAlmostSame((double r, double theta) line1, (double r, double theta) line2)
@@ -2274,11 +2309,24 @@ namespace INFOIBV
 
             return false;
         }
+        private bool AreAlmostPerpendicular((double r, double theta) line1, (double r, double theta) line2)
+        {
+            double diff = Math.Abs(line1.theta - line2.theta);
+            if (87 < diff && diff  < 93) return true;
+            return false;
+        }
         private bool areDistantParallel((double r, double theta) line1, (double r, double theta) line2)
         {
             double diff = Math.Abs(line1.theta - line2.theta);
-            if (diff < 5 && Math.Abs(line1.r - line2.r ) > 25) return true;
-            if (diff > 175 && Math.Abs(line1.r + line2.r ) > 25) return true;
+            if (diff < 5 && Math.Abs(line1.r - line2.r) > 25) return true;
+            if (diff > 175 && Math.Abs(line1.r + line2.r) > 25) return true;
+            return false;
+        }
+
+        private bool areAlmostParallel((double r, double theta) line1, (double r, double theta) line2)
+        {
+            double diff = Math.Abs(line1.theta - line2.theta);
+            if (diff < 5 || diff > 175) return true;
             return false;
         }
     }
