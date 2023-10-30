@@ -2312,7 +2312,7 @@ namespace INFOIBV
         private bool AreAlmostPerpendicular((double r, double theta) line1, (double r, double theta) line2)
         {
             double diff = Math.Abs(line1.theta - line2.theta);
-            if (87 < diff && diff  < 93) return true;
+            if (85 < diff && diff  < 95) return true;
             return false;
         }
         private bool areDistantParallel((double r, double theta) line1, (double r, double theta) line2)
