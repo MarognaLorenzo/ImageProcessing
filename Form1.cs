@@ -467,8 +467,8 @@ namespace INFOIBV
                 blobs = blobFinding(reAdjust, 0.2, ref workingImage);
                 for (int i = 0; i < blobs.Count; i++)
                 {
-                    blobs[i].x_shift(region.left);
-                    blobs[i].y_shift(region.bottom);
+                    blobs[i].x += region.left;
+                    blobs[i].y += region.bottom;
                 }
                 if (vertices.Count == 4)
                 {
@@ -758,7 +758,7 @@ namespace INFOIBV
             }
         }
 
-        private struct RectangularRegion
+        private class RectangularRegion
         {
             public int top;
             public int bottom;
@@ -798,7 +798,7 @@ namespace INFOIBV
                 return creation_points;
             }
         }
-        private struct Line
+        private class Line
         {
             public double theta;
             public double r;
@@ -841,7 +841,7 @@ namespace INFOIBV
 
 
         }
-        private struct PixelPoint
+        private class PixelPoint
         {
             public int x { get; set; }
             public int y { get; set; }
@@ -849,14 +849,6 @@ namespace INFOIBV
             {
                 this.x = x;
                 this.y = y;
-            }
-            public void x_shift(int shift)
-            {
-                x += shift;
-            }
-            public void y_shift(int shift)
-            {
-                y += shift;
             }
         }
     }
