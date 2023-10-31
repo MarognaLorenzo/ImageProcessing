@@ -86,7 +86,7 @@ namespace INFOIBV
             {
                 double T = ((double)kv.Value.sumx) / kv.Value.count * 180 / 500;
                 double R = (((double)kv.Value.sumy) / kv.Value.count * maxR / 500) - maxR / 2;
-                Console.WriteLine("R:" + R + " - T: " + T + "count:" + kv.Value.count);
+                //Console.WriteLine("R:" + R + " - T: " + T + "count:" + kv.Value.count);
                 lines.Add(new Line(R, T));
             }
             return lines;
@@ -103,14 +103,14 @@ namespace INFOIBV
         *          maximum_gap                      
         * output:                                   list of line segmentsToAdd
         */
-        (List<Segment>, List<(int, int)> pixel_to_check) hough_line_detection(byte[,] inputImage, double radius, double theta, int minimum_intensity_threshold, int minimum_lenght, int maximum_gap)
+        (List<Segment>, List<PixelPoint> pixel_to_check) hough_line_detection(byte[,] inputImage, double radius, double theta, int minimum_intensity_threshold, int minimum_lenght, int maximum_gap)
         {
 
             List<Segment> segment_list = new List<Segment>();
-            HashSet<(int, int)> pixels_in_line_set = new HashSet<(int, int)>();
+            HashSet<PixelPoint> pixels_in_line_set = new HashSet<PixelPoint>();
             bool binary = isBinary(inputImage);
 
-            (int c, int r) image_center = (inputImage.GetLength(0) / 2, inputImage.GetLength(1) / 2);
+            PixelPoint image_center = new PixelPoint(inputImage.GetLength(0) / 2, inputImage.GetLength(1) / 2);
             double cos_theta = Math.Cos(degree_to_rad(theta));
             double sen_theta = Math.Sin(degree_to_rad(theta));
 
@@ -126,7 +126,7 @@ namespace INFOIBV
             int strikes = 0;
             while (true)
             {
-                if (!(x < image_center.c && x > -image_center.c && y < image_center.r && y > -image_center.r)) // I need to stay in the image
+                if (!(x < image_center.x && x > -image_center.x && y < image_center.y && y > -image_center.y)) // I need to stay in the image
                 {
                     if (strikes == 1) break; // Once I get at the end of the image I need to restart from the starting point and go in the other direction
                     strikes++;
@@ -143,8 +143,8 @@ namespace INFOIBV
                 y += y_increment;
             }
 
-            List<(int, int)> pixels_in_line_list = pixels_in_line_set.ToList();
-            pixels_in_line_list.Sort(); // it gets sorted on first element of the tuple first
+            List<PixelPoint> pixels_in_line_list = pixels_in_line_set.ToList();
+            pixels_in_line_list.OrderBy(Point => Point.x); // it gets sorted on first element of the tuple first
 
 
             // Walk through the line from left to right (its sorted) with pen "up" or "down" (tracking state == true -> pen down) depending on the state. State can change depending on pixel intensity and parameters
@@ -153,11 +153,11 @@ namespace INFOIBV
             int seg_cont = 0; // checks how many pixels are in my segment
             Segment new_segment = new Segment();
             new_segment.clear();
-            foreach ((int c, int r) line_pixel in pixels_in_line_list)
+            foreach (PixelPoint line_pixel in pixels_in_line_list)
             {
                 //inputImage[line_pixel.c, line_pixel.r] = 255;
 
-                if (inputImage[line_pixel.c, line_pixel.r] >= (binary ? 255 : minimum_intensity_threshold))
+                if (inputImage[line_pixel.x, line_pixel.y] >= (binary ? 255 : minimum_intensity_threshold))
                 {       // pixel on
                     if (!tracking_state)
                     { // starting a new segment
@@ -168,7 +168,7 @@ namespace INFOIBV
                     }
                     else
                     {       // Continue an existing segment
-                        new_segment.end = (line_pixel.c, line_pixel.r);
+                        new_segment.end = line_pixel;
                         seg_cont++;
                         gap_cont = 0;
                     }
@@ -202,7 +202,7 @@ namespace INFOIBV
         * output:                                   Bitmap with red segmentsToAdd on it
         */
 
-        void hough_visualization(List<Segment> segments, ref Bitmap inputImage, List<(int c, int r)> pixel_in_line, Color color)
+        void hough_visualization(List<Segment> segments, ref Bitmap inputImage, List<PixelPoint> pixel_in_line, Color color)
         {
             foreach (Segment segment in segments)// for each segment
             {
@@ -210,7 +210,7 @@ namespace INFOIBV
                 foreach (var pixel in pixel_in_line)//for each pixel in the line walk through the line, when I meet the start of the segment I start drawing until I find the end of the segment
                 {
                     if (pixel == segment.start) start = true;
-                    else if (start) inputImage.SetPixel(pixel.c, pixel.r, color);
+                    else if (start) inputImage.SetPixel(pixel.x, pixel.y, color);
                     if (pixel == segment.end) break;
                 }
             }
@@ -225,7 +225,7 @@ namespace INFOIBV
         */
         List<PixelPoint> hough_crossing_line(List<Line> lines, byte[,] inputImage)
         {
-            (int c, int r) image_center = (inputImage.GetLength(0) / 2, inputImage.GetLength(1) / 2);
+            PixelPoint image_center = new PixelPoint(inputImage.GetLength(0) / 2, inputImage.GetLength(1) / 2);
             List<PixelPoint> res = new List<PixelPoint>();
 
             for (int i = 0; i < lines.Count; i++)
@@ -266,10 +266,10 @@ namespace INFOIBV
                         }
                     }
 
-                    (int c, int r) pixel_coord = math_to_image(image_center, (x, (y < 0 ? y : y + 1))); // finding pixel coords in the image and check if the pixel is inside the boundaries of the image
-                    if (pixel_coord.c < 0 || pixel_coord.c >= inputImage.GetLength(0) || pixel_coord.r < 0 || pixel_coord.r >= inputImage.GetLength(1)) continue;
+                    PixelPoint pixel_coord = math_to_image(image_center, (x, (y < 0 ? y : y + 1))); // finding pixel coords in the image and check if the pixel is inside the boundaries of the image
+                    if (pixel_coord.x < 0 || pixel_coord.x >= inputImage.GetLength(0) || pixel_coord.y < 0 || pixel_coord.y >= inputImage.GetLength(1)) continue;
 
-                    res.Add(new PixelPoint(pixel_coord.c, pixel_coord.r));
+                    res.Add(pixel_coord);
 
                 }
             }
@@ -434,7 +434,7 @@ namespace INFOIBV
             {
                 int x = kv.Value.sumx / kv.Value.count;
                 int y = kv.Value.sumy / kv.Value.count;
-                Console.WriteLine("Blob: x: " + x + " y: " + y);
+                //Console.WriteLine("Blob: x: " + x + " y: " + y);
                 centroids.Add(new PixelPoint(x, y));
             }
             return centroids;

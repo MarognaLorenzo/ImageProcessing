@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
-
+using System.Runtime.InteropServices.WindowsRuntime;
 using System.Windows.Forms;
 
 
@@ -116,12 +116,12 @@ namespace INFOIBV
             List<Line> lines = peakFinding(g_scale_image, THRESHOLD); // find lines
 
             List<List<Segment>> segments = new List<List<Segment>>();
-            List<List<(int, int)>> pixel_in_lines = new List<List<(int, int)>>();
+            List<List<PixelPoint>> pixel_in_lines = new List<List<PixelPoint>>();
 
             foreach (Line line in lines) // for every line detect segments and all pixel on that line ( for precision and easier computation)
             {
-                (List<Segment> segmentsToAdd, List<(int, int)> pixels_on_line) = hough_line_detection(workingImage, line.r, line.theta, MINIMUM_THRESHOLD, MINIMUM_LENGHT, MAXIMUM_GAP);
-                Console.WriteLine("Line - r: " + line.r + "theta: " + line.theta);
+                (List<Segment> segmentsToAdd, List<PixelPoint> pixels_on_line) = hough_line_detection(workingImage, line.r, line.theta, MINIMUM_THRESHOLD, MINIMUM_LENGHT, MAXIMUM_GAP);
+                //Console.WriteLine("Line - r: " + line.r + "theta: " + line.theta);
                 segments.Add(segmentsToAdd);
                 pixel_in_lines.Add(pixels_on_line);
             }
@@ -143,9 +143,9 @@ namespace INFOIBV
 
             //VISUALIZE BASE LINES
             foreach (var line in pixel_in_lines)
-                foreach ((int c, int r) pixel in line)
+                foreach (PixelPoint pixel in line)
                 {
-                    OutputImage.SetPixel(pixel.c, pixel.r, Color.Yellow);
+                    OutputImage.SetPixel(pixel.x, pixel.y, Color.Yellow);
                 }
 
             // VISUALIZE RED LINES
@@ -181,11 +181,11 @@ namespace INFOIBV
             List<Line> lines = peakFinding(g_scale_image, THRESHOLD); // find peaks
 
             List<List<Segment>> segments = new List<List<Segment>>();
-            List<List<(int, int)>> pixel_in_lines = new List<List<(int, int)>>();
+            List<List<PixelPoint>> pixel_in_lines = new List<List<PixelPoint>>();
 
             foreach (Line line in lines) // for every detected lines find segments and whole line ( easier for computation and precision)
             {
-                (List<Segment> segmentsToAdd, List<(int, int)> pixels_on_line) = hough_line_detection(workingImage, line.r, line.theta, MINIMUM_THRESHOLD, MINIMUM_LENGHT, MAXIMUM_GAP);
+                (List<Segment> segmentsToAdd, List<PixelPoint> pixels_on_line) = hough_line_detection(workingImage, line.r, line.theta, MINIMUM_THRESHOLD, MINIMUM_LENGHT, MAXIMUM_GAP);
                 segments.Add(segmentsToAdd);
                 pixel_in_lines.Add(pixels_on_line);
             }
@@ -434,7 +434,6 @@ namespace INFOIBV
 
         private void FindSocketClick(object sender, EventArgs e)
         {
-            bool detectedSocket = false;
             if (InputImage1 == null) return;                                 // get out if no input image
             if (OutputImage != null) OutputImage.Dispose();                 // reset output image
             OutputImage = new Bitmap(InputImage1.Size.Width, InputImage1.Size.Height); // create new output image
@@ -462,6 +461,7 @@ namespace INFOIBV
             List<RectangularRegion> regions = identify_regions(grid_lines, grid_lines_index, ref workingImage);
 
             Console.WriteLine("I have found " + regions.Count + " possible sockets");
+            List<RectangularRegion> sockets = new List<RectangularRegion>();
 
             foreach (RectangularRegion region in regions)
             {
@@ -481,27 +481,28 @@ namespace INFOIBV
                     Console.WriteLine("Socket not found");
                     continue;
                 }
-                if (region.blobs.Count == 3 || region.blobs.Count == 2)
-                {
-                    new RectangularRegion(region.blobs).get_baricenter()
-                    if (region.blobs.All(bl => Math.Abs(bl.x - region.blobs[0].x) < 3) || region.blobs.All(bl => Math.Abs(bl.y - region.blobs[0].y) < 3))
-                    {
-                        detectedSocket = true;
-                        Console.WriteLine("Socket found");
-                    }
+                Console.WriteLine("Blob in this region: ");
+                foreach(var blob in region.blobs) Console.WriteLine(blob.toString());
+                PixelPoint blob_baricenter = baricenterOf(region.blobs);
+                Console.WriteLine("Blobs baricenter : " + blob_baricenter.toString());
+
+                Console.WriteLine(region.toString());
+                PixelPoint region_baricenter = region.get_baricenter();
+                Console.WriteLine("Region baricenter: " + region_baricenter.toString());
+                double euc = blob_baricenter.euclidian_distance(region_baricenter);
+                if (euc < 30){ // SOCKET FOUND
+                    sockets.Add(region);
+                    Console.WriteLine("Socket found");
                 }
             }
 
-            
-
-
 
             List<List<Segment>> segments = new List<List<Segment>>();
-            List<List<(int, int)>> pixel_in_lines = new List<List<(int, int)>>();
+            List<List<PixelPoint>> pixel_in_lines = new List<List<PixelPoint>>();
 
             foreach (Line line in lines) // for every detected lines find segments and whole line ( easier for computation and precision)
             {
-                (List<Segment> segmentsToAdd, List<(int, int)> pixels_on_line) = hough_line_detection(workingImage, line.r, line.theta, MINIMUM_THRESHOLD, MINIMUM_LENGHT, MAXIMUM_GAP);
+                (List<Segment> segmentsToAdd, List<PixelPoint> pixels_on_line) = hough_line_detection(workingImage, line.r, line.theta, MINIMUM_THRESHOLD, MINIMUM_LENGHT, MAXIMUM_GAP);
                 segments.Add(segmentsToAdd);
                 pixel_in_lines.Add(pixels_on_line);
             }
@@ -529,20 +530,21 @@ namespace INFOIBV
             //hough_visualize_crossing(crossing_coords, ref OutputImage);
 
 
-            // VISUALIZE square
-            for (int i = 0; i < segments.Count; i++)
-                if(grid_lines_index.Exists(x => x == i))
-                    hough_visualization(segments[i], ref OutputImage, pixel_in_lines[i], Color.Blue);
+            //// VISUALIZE square
+            //for (int i = 0; i < segments.Count; i++)
+            //    if(grid_lines_index.Exists(x => x == i))
+            //        hough_visualization(segments[i], ref OutputImage, pixel_in_lines[i], Color.Blue);
 
 
-            //Vertices of the parallel lines
-            //hough_visualize_crossing(vertices, ref OutputImage, false, Color.Orange);
+            ////Vertices of the parallel lines
+            ////hough_visualize_crossing(vertices, ref OutputImage, false, Color.Orange);
 
-            foreach (RectangularRegion region in regions)
-                hough_visualize_crossing(region.get_creation_point(), ref OutputImage, false, Color.Red);
+            //foreach (RectangularRegion region in regions)
+            //    hough_visualize_crossing(region.get_creation_point(), ref OutputImage, false, Color.Red);
 
-
-
+            foreach(var socket in sockets)
+                foreach (var pixel in socket.generate_rectangle())
+                    OutputImage.SetPixel(pixel.x, pixel.y, Color.Blue);
             //Blo
             //hough_visualize_crossing(blobs, ref OutputImage, false, Color.YellowGreen);
 
@@ -585,6 +587,7 @@ namespace INFOIBV
                 if (axis1.Any(horixontal_line => horixontal_line.isAlmostParallelWith(line))) axis1.Add(line);
                 else axis2.Add(line);
             }
+            if (axis2.Count == 0 || axis1.Count == 0) return new List<RectangularRegion>();
 
             List<Line> h_lines;
             List<Line> v_lines;
@@ -634,7 +637,7 @@ namespace INFOIBV
                     
                     if (line1.isDistantParallelWith(line2))
                     {
-                        Console.WriteLine("Parallel line: " + line1.ToString() + "with " + line2.ToString());
+                        //Console.WriteLine("Parallel line: " + line1.ToString() + "with " + line2.ToString());
                         pairable_lines.Add(line1);
                         pairable_lines.Add(line2);
                         pairable_lines_index.Add(j);
@@ -679,6 +682,11 @@ namespace INFOIBV
             return (result, chosen_index);
         }
 
+        PixelPoint baricenterOf(List<PixelPoint> points)
+        {
+               return new PixelPoint((int) points.Select(point => point.x).Average(), (int) points.Select(point => point.y) .Average());
+        }
+
 
         /*
         * isBinary: takes as input a single channel image and return true only if all values of the image are either 0 or 255
@@ -703,9 +711,9 @@ namespace INFOIBV
         /*
          * math_to_image: converts some coordinates from the mathematical space to the image coordinates, using the position of the center of the image
          */
-        (int, int) math_to_image((int c, int r) image_center, (double x, double y) xy)
+        PixelPoint math_to_image(PixelPoint image_center, (double x, double y) xy)
         {
-            return (image_center.c + (int)xy.x, image_center.r - (int)xy.y);
+            return new PixelPoint(image_center.x + (int)xy.x, image_center.y - (int)xy.y);
         }
 
 
@@ -724,15 +732,15 @@ namespace INFOIBV
             Plus
         }
 
-        private struct Segment
+        private class Segment
         {
-            public (int c, int r) start;
-            public (int c, int r) end;
+            public PixelPoint start;
+            public PixelPoint end;
             public void clear()
             {
-                this.start = this.end = (-1, -1);
+                start = end = new PixelPoint(-1, -1);
             }
-            public void set_start((int, int) start)
+            public void set_start(PixelPoint start)
             {
                 this.start = start;
 
@@ -762,6 +770,10 @@ namespace INFOIBV
                 return (top, right, bottom, left);
             }
 
+            public RectangularRegion(int value)
+            {
+                top = bottom = left = right = value;
+            }
             public RectangularRegion (List<PixelPoint> vertices)
             {
                 if (vertices.Count == 0) throw new Exception("No vertices");
@@ -783,7 +795,28 @@ namespace INFOIBV
 
             public PixelPoint get_baricenter()
             {
-                return new PixelPoint(right + left / 2, top + bottom / 2);
+                return new PixelPoint((right + left) / 2, (top + bottom )/ 2);
+            }
+
+            public String toString()
+            {
+                return "Rectangular region => top: " + top + " bottom: " + bottom + "right: " + right + " left: " + left;
+            }
+            public List<PixelPoint> generate_rectangle()
+            {
+                List<PixelPoint> list = new List<PixelPoint>();
+                for (int y = bottom; y <= top; y++)
+                {
+                    list.Add(new PixelPoint(right, y));
+                    list.Add(new PixelPoint(left, y));
+
+                }
+                for (int x = left; x <= right; x++)
+                {
+                    list.Add(new PixelPoint(x, top));
+                    list.Add(new PixelPoint(x, bottom));
+                }
+                return list;
             }
         }
         private class Line
@@ -837,6 +870,15 @@ namespace INFOIBV
             {
                 this.x = x;
                 this.y = y;
+            }
+            public double euclidian_distance(PixelPoint p2)
+            {
+                return Math.Sqrt(Math.Pow((x - p2.x), 2) + Math.Pow((y - p2.y), 2));
+            }
+
+            public String toString()
+            {
+                return "Point => x: " + x + ", " + y + ")";
             }
         }
     }
