@@ -70,6 +70,31 @@ namespace INFOIBV
             return tempImage;
         }
 
+        private byte[,] brightImage(byte[,] inputImage, int value)
+        {
+            byte[,] tempImage = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
+
+            // setup progress bar
+            progressBar.Visible = true;
+            progressBar.Minimum = 1;
+            progressBar.Maximum = InputImage1.Size.Width * InputImage1.Size.Height;
+            progressBar.Value = 1;
+            progressBar.Step = 1;
+
+            // process all pixels in the image
+            for (int x = 0; x < inputImage.GetLength(0); x++)                 // loop over columns
+                for (int y = 0; y < inputImage.GetLength(1); y++)            // loop over rows
+                {
+                    // get pixel color
+                    tempImage[x, y] = (byte)(Math.Min(255,Math.Max(0, inputImage[x, y] + value)));      // add or take down
+                    progressBar.PerformStep();                              // increment progress bar
+                }
+
+            progressBar.Visible = false;                                    // hide progress bar
+
+            return tempImage;
+        }
+
 
         /*
          * adjustContrast: create an image with the full range of intensity values used
@@ -525,6 +550,8 @@ namespace INFOIBV
             return tempImage;
         }
 
+        
+
         /*
          * kernel_processing: checks if the kernel is squared and with odd size and 
          * input:   kernel              float matrix
@@ -580,6 +607,34 @@ namespace INFOIBV
                 {
                     // get pixel color
                     tempImage[x, y] = (byte)(inputImage[x, y] >= th ? 255 : 0);
+                    progressBar.PerformStep();                              // increment progress bar
+                }
+
+            progressBar.Visible = false;
+
+            return tempImage;
+        }
+
+        private byte[,] thresholdMapToZeroImage(byte[,] inputImage, int th)
+        {
+            // create temporary grayscale image
+            byte[,] tempImage = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
+
+            // TODO: add your functionality and checks, think about how to represent the binary values
+
+            // setup progress bar
+            progressBar.Visible = true;
+            progressBar.Minimum = 1;
+            progressBar.Maximum = inputImage.GetLength(0) * inputImage.GetLength(1);
+            progressBar.Value = 1;
+            progressBar.Step = 1;
+
+            // process all pixels in the image
+            for (int x = 0; x < inputImage.GetLength(0); x++)                 // loop over columns
+                for (int y = 0; y < inputImage.GetLength(1); y++)            // loop over rows
+                {
+                    // get pixel color
+                    tempImage[x, y] = (byte)(inputImage[x, y] >= th ? inputImage[x,y] : 0);
                     progressBar.PerformStep();                              // increment progress bar
                 }
 
