@@ -49,6 +49,10 @@ namespace INFOIBV
 
         public INFOIBV()
         {
+            foreach(var  el in hPrewittfilter)
+            {
+                Console.WriteLine(el.ToString());
+            }
             InitializeComponent();
         }
 
@@ -453,44 +457,42 @@ namespace INFOIBV
             (List<Line> grid_lines, List<int> grid_lines_index) = findGrid(lines, ref workingImage);
 
 
-            List<PixelPoint> vertices = hough_crossing_line(grid_lines, workingImage);
+            //List<PixelPoint> vertices = hough_crossing_line(grid_lines, workingImage);
 
             List<RectangularRegion> regions = identify_regions(grid_lines, grid_lines_index, ref workingImage);
 
-            // blob detection
-            List<PixelPoint> blobs = new List<PixelPoint>();
-            if (vertices.Count > 1)
+            Console.WriteLine("I have found " + regions.Count + " possible sockets");
+
+            foreach (RectangularRegion region in regions)
             {
-                RectangularRegion region = new RectangularRegion(vertices);
+                // blob detection
+                
                 byte[,] crop = cropImage(contrast, region);
                 byte[,] reAdjust = adjustContrast(crop);
-                blobs = blobFinding(reAdjust, 0.2, ref workingImage);
-                for (int i = 0; i < blobs.Count; i++)
+                region.blobs = blobFinding(reAdjust, 0.2, ref workingImage);
+                
+                for (int i = 0; i < region.blobs.Count; i++)
                 {
-                    blobs[i].x += region.left;
-                    blobs[i].y += region.bottom;
+                    region.blobs[i].x += region.left;
+                    region.blobs[i].y += region.bottom;
                 }
-                if (vertices.Count == 4)
+                if (region.blobs.Count < 2)
                 {
-                    if (blobs.Count < 2)
-                    {
-                        Console.WriteLine("Socket not found");
-                        return;
-                    }
-                    if (blobs.Count == 3 || blobs.Count == 2)
-                    {
-                        if( blobs.All(bl => Math.Abs(bl.x - blobs[0].x) < 3) || blobs.All(bl => Math.Abs(bl.y - blobs[0].y) < 3))
-                        {
-                            detectedSocket = true;
-                            Console.WriteLine("Socket found");
-                        }
-                    }
-
-
+                    Console.WriteLine("Socket not found");
+                    continue;
                 }
-
-
+                if (region.blobs.Count == 3 || region.blobs.Count == 2)
+                {
+                    new RectangularRegion(region.blobs).get_baricenter()
+                    if (region.blobs.All(bl => Math.Abs(bl.x - region.blobs[0].x) < 3) || region.blobs.All(bl => Math.Abs(bl.y - region.blobs[0].y) < 3))
+                    {
+                        detectedSocket = true;
+                        Console.WriteLine("Socket found");
+                    }
+                }
             }
+
+            
 
 
 
@@ -534,15 +536,15 @@ namespace INFOIBV
 
 
             //Vertices of the parallel lines
-            hough_visualize_crossing(vertices, ref OutputImage, false, Color.Orange);
+            //hough_visualize_crossing(vertices, ref OutputImage, false, Color.Orange);
 
-            //foreach (RectangularRegion region in regions)
-            //    hough_visualize_crossing(region.get_creation_point(), ref OutputImage, false, Color.Red);
+            foreach (RectangularRegion region in regions)
+                hough_visualize_crossing(region.get_creation_point(), ref OutputImage, false, Color.Red);
 
 
 
             //Blo
-            hough_visualize_crossing(blobs, ref OutputImage, false, Color.YellowGreen);
+            //hough_visualize_crossing(blobs, ref OutputImage, false, Color.YellowGreen);
 
             pictureBoxOut.Image = (Image)OutputImage;                         // display output image
 
@@ -566,29 +568,8 @@ namespace INFOIBV
             byte[,] open_invert = openImage(invert, createStructuringElement(5, SEShape.Plus), true);
 
             byte[,] flood = floodFill(open_invert); // label all regions with an incremental ID
-
-            IDictionary<int, (int count, int sumx, int sumy)> map = new Dictionary<int, (int, int, int)>();// data structure for finding centroids x and y position
-
-            for (int c = 0; c < flood.GetLength(0); c++) // find centroids
-                for (int r = 0; r < flood.GetLength(1); r++)
-                {
-                    if (flood[c, r] == 0) continue; // bg pixels are not important
-                    (int a, int b, int c) elem = (0, 0, 0);
-                    if (map.ContainsKey(flood[c, r])) elem = map[flood[c, r]];
-                    elem = (elem.a + 1, elem.b + c, elem.c + r);
-                    map[flood[c, r]] = elem;
-                }
-
-
-            List<PixelPoint> blobs = new List<PixelPoint>();
-            foreach (var kv in map)// for each kea value in the dictionary with centroids sums and count of pixels get the average and add it to the result
-            {
-                int x = kv.Value.sumx / kv.Value.count;
-                int y = kv.Value.sumy / kv.Value.count;
-                Console.WriteLine("Blob: x: " + x + " y: " + y);
-                blobs.Add(new PixelPoint(x, y));
-            }
-            return blobs;
+            
+            return findCentroids(flood);
         }
 
         private List<RectangularRegion> identify_regions(List<Line> grid_lines, List<int> grid_lines_index, ref byte[,] workinImage)
@@ -766,6 +747,8 @@ namespace INFOIBV
             public int left;
 
             private List<PixelPoint> creation_points;
+            public List<PixelPoint> blobs;
+
             public int get_height()
             {
                 return this.top - this.bottom;
@@ -796,6 +779,11 @@ namespace INFOIBV
             public List<PixelPoint> get_creation_point()
             {
                 return creation_points;
+            }
+
+            public PixelPoint get_baricenter()
+            {
+                return new PixelPoint(right + left / 2, top + bottom / 2);
             }
         }
         private class Line

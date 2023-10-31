@@ -418,7 +418,6 @@ namespace INFOIBV
         List<PixelPoint> findCentroids(byte[,] flood)
         {
             IDictionary<int, (int count, int sumx, int sumy)> map = new Dictionary<int, (int, int, int)>();// data structure for finding centroids x and y position
-
             for (int c = 0; c < flood.GetLength(0); c++) // find centroids
                 for (int r = 0; r < flood.GetLength(1); r++)
                 {
