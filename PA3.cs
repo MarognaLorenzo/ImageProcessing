@@ -414,5 +414,31 @@ namespace INFOIBV
                 }
             return temp;
         }
+
+        List<PixelPoint> findCentroids(byte[,] flood)
+        {
+            IDictionary<int, (int count, int sumx, int sumy)> map = new Dictionary<int, (int, int, int)>();// data structure for finding centroids x and y position
+
+            for (int c = 0; c < flood.GetLength(0); c++) // find centroids
+                for (int r = 0; r < flood.GetLength(1); r++)
+                {
+                    if (flood[c, r] == 0) continue; // bg pixels are not important
+                    (int a, int b, int c) elem = (0, 0, 0);
+                    if (map.ContainsKey(flood[c, r])) elem = map[flood[c, r]];
+                    elem = (elem.a + 1, elem.b + c, elem.c + r);
+                    map[flood[c, r]] = elem;
+                }
+
+
+            List<PixelPoint> centroids = new List<PixelPoint>();
+            foreach (var kv in map)// for each kea value in the dictionary with centroids sums and count of pixels get the average and add it to the result
+            {
+                int x = kv.Value.sumx / kv.Value.count;
+                int y = kv.Value.sumy / kv.Value.count;
+                Console.WriteLine("Blob: x: " + x + " y: " + y);
+                centroids.Add(new PixelPoint(x, y));
+            }
+            return centroids;
+        }
     }
 }
