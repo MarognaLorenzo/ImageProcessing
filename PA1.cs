@@ -208,7 +208,7 @@ namespace INFOIBV
          *          sigma               standard deviation of the Gaussian distribution
          * output:                      Gaussian filter
          */
-        private float[,] createGaussianFilter(byte size, float sigma)
+        private float[,] createGaussianFilter(int size, float sigma)
         {
             // create temporary grayscale image
             float[,] filter = new float[size, size];
@@ -672,9 +672,9 @@ namespace INFOIBV
 
         }
 
-        private byte[,] canny_edge_detection(byte[,] inputImage)
+        private byte[,] canny_edge_detection(byte[,] inputImage, int sizeGaussiagn, int sigma, int low_th, int high_th)
         {
-            inputImage = convolveImage(inputImage, createGaussianFilter(3, 1), false);
+            inputImage = convolveImage(inputImage, createGaussianFilter(sizeGaussiagn, sigma), false);
             byte[,] Gx = convolveImage(inputImage,convertKernel(xSobelfilter), false); // gradiente orizzontale, linee verticali
             byte[,] Gy= convolveImage(inputImage,convertKernel(ySobelfilter), false);  // gradiente verticale, linee orizzontali
             int[,] magnitude = new int[inputImage.GetLength(0), inputImage.GetLength(1)];
@@ -729,8 +729,8 @@ namespace INFOIBV
             for (int c = 0; c < inputImage.GetLength(0); c++)
                 for (int r = 0; r < inputImage.GetLength(1); r++)
                 {
-                    if (direction[c, r] > 3) continue;
                     int dir = direction[c, r];
+                    if (dir > 3) continue;
                     int x_off, y_off;
                     switch (dir)
                     {
@@ -751,7 +751,7 @@ namespace INFOIBV
 
                         case 3:
                             x_off = -1;
-                            y_off = -1;
+                            y_off = 1;
                             break;
 
                         default:
@@ -760,22 +760,21 @@ namespace INFOIBV
                     }
                     if (c + x_off >= inputImage.GetLength(0) || c + x_off < 0 || r + y_off >= inputImage.GetLength(1) || r + y_off < 0) continue;
                     non_max_sup[c,r] = (magnitude[c,r] <= magnitude[c + x_off, r + y_off]) ? 0 : magnitude[c,r];
+                    x_off = - x_off; y_off = - y_off;
+                    if (c + x_off >= inputImage.GetLength(0) || c + x_off < 0 || r + y_off >= inputImage.GetLength(1) || r + y_off < 0) continue;
+                    non_max_sup[c, r] = (magnitude[c, r] <= magnitude[c + x_off, r + y_off]) ? 0 : magnitude[c, r];
 
                 }
 
-            int high_th = 150;
-            int low_th = 50;
             byte[,] contr = adjustContrast(non_max_sup);
-
-            byte[,] topPixel = thresholdImage(contr, high_th);
 
 
             Queue<PixelPoint> pixel_to_check = new Queue<PixelPoint>() ;
-            for(int c = 0; c < topPixel.GetLength(0); c++)
-                for(int r = 0; r < topPixel.GetLength(1); r++)
-                    if (topPixel[c,r] > 0) pixel_to_check.Enqueue(new PixelPoint(c, r));
+            for(int c = 0; c < non_max_sup.GetLength(0); c++)
+                for(int r = 0; r < non_max_sup.GetLength(1); r++)
+                    if (non_max_sup[c,r] >= high_th) pixel_to_check.Enqueue(new PixelPoint(c, r));
 
-            byte[,] result_image = new byte[topPixel.GetLength(0), topPixel.GetLength(1)];
+            byte[,] result_image = new byte[non_max_sup.GetLength(0), non_max_sup.GetLength(1)];
 
             while (pixel_to_check.Any())
             {

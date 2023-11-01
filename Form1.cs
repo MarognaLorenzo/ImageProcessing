@@ -377,8 +377,8 @@ namespace INFOIBV
 
             byte[,] g_scale_image = convertToGrayscale(Image);          // convert image to grayscale
 
-            byte[,] edge = canny_edge_detection(g_scale_image);
-            byte[,] workingImage = adjustContrast(brightImage(edge, -50));
+            byte[,] edge = canny_edge_detection(g_scale_image, 3, 1, 50, 100);
+            byte[,] workingImage = edge;
 
             // copy array to output Bitmap
             for (
