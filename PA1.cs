@@ -671,5 +671,136 @@ namespace INFOIBV
             return temp_image;
 
         }
+
+        private byte[,] canny_edge_detection(byte[,] inputImage)
+        {
+            inputImage = convolveImage(inputImage, createGaussianFilter(3, 1), false);
+            byte[,] Gx = convolveImage(inputImage,convertKernel(xSobelfilter), false); // gradiente orizzontale, linee verticali
+            byte[,] Gy= convolveImage(inputImage,convertKernel(ySobelfilter), false);  // gradiente verticale, linee orizzontali
+            int[,] magnitude = new int[inputImage.GetLength(0), inputImage.GetLength(1)];
+            int[,] non_max_sup = new int[inputImage.GetLength(0), inputImage.GetLength(1)];
+
+            double theta = Math.PI / 8; // Angolo di rotazione in radianti (π/8)
+            double cosTheta = Math.Cos(theta);
+            double sinTheta = Math.Sin(theta);
+
+            // Calcolo delle nuove componenti ruotate
+            byte[,] direction = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
+            for(int c = 0; c < inputImage.GetLength(0); c++)
+                for(int r = 0; r < inputImage.GetLength(1); r++)
+                {
+                    magnitude[c,r] = (int) Math.Sqrt(Gx[c,r] * Gx[c,r] + Gy[c, r] * Gy[c, r]);
+                    if (magnitude[c, r] == 0)
+                    {
+                        direction[c, r] = 9;
+                        continue;
+                    }
+                    double vx = Gx[c, r] * cosTheta - Gy[c, r] * sinTheta;
+                    double vy = Gx[c, r] * sinTheta + Gy[c, r] * cosTheta;
+
+                    if(vx >= 0)
+                    {
+                        if(vy >= 0)
+                        {
+                            if (vx >= vy) direction[c, r] = 0;
+                            else direction[c, r] = 1;
+                        }
+                        else
+                        {
+                            if (vx >= -vy) direction[c, r] = 7;
+                            else direction[c, r] = 6;
+                        }
+                    }
+                    else
+                    {
+                        if (vy >= 0)
+                        {
+                            if (-vx >= vy) direction[c, r] = 3;
+                            else direction[c, r] = 2;
+                        }
+                        else
+                        {
+                            if (-vx >= -vy) direction[c, r] = 4;
+                            else direction[c, r] = 5;
+                        }
+                    }
+                }
+
+            for (int c = 0; c < inputImage.GetLength(0); c++)
+                for (int r = 0; r < inputImage.GetLength(1); r++)
+                {
+                    if (direction[c, r] > 3) continue;
+                    int dir = direction[c, r];
+                    int x_off, y_off;
+                    switch (dir)
+                    {
+                        case 0:
+                            x_off = 1;
+                            y_off = 0;
+                            break;
+
+                        case 1:
+                            x_off = 1;
+                            y_off = 1;
+                            break;
+
+                        case 2:
+                            x_off = 0;
+                            y_off = 1;
+                            break;
+
+                        case 3:
+                            x_off = -1;
+                            y_off = -1;
+                            break;
+
+                        default:
+                            throw new Exception("I should never reach this point!");
+                            // Gestione del caso in cui dir non corrisponde a nessuna delle casistiche sopra
+                    }
+                    if (c + x_off >= inputImage.GetLength(0) || c + x_off < 0 || r + y_off >= inputImage.GetLength(1) || r + y_off < 0) continue;
+                    non_max_sup[c,r] = (magnitude[c,r] <= magnitude[c + x_off, r + y_off]) ? 0 : magnitude[c,r];
+
+                }
+
+            int high_th = 150;
+            int low_th = 50;
+            byte[,] contr = adjustContrast(non_max_sup);
+
+            byte[,] topPixel = thresholdImage(contr, high_th);
+
+
+            Queue<PixelPoint> pixel_to_check = new Queue<PixelPoint>() ;
+            for(int c = 0; c < topPixel.GetLength(0); c++)
+                for(int r = 0; r < topPixel.GetLength(1); r++)
+                    if (topPixel[c,r] > 0) pixel_to_check.Enqueue(new PixelPoint(c, r));
+
+            byte[,] result_image = new byte[topPixel.GetLength(0), topPixel.GetLength(1)];
+
+            while (pixel_to_check.Any())
+            {
+                PixelPoint pixel = pixel_to_check.Dequeue();
+                int px = pixel.x;
+                int py = pixel.y;
+                if (result_image[px, py] == 255) continue;
+                if (px < 0 || px >= inputImage.GetLength(0) || py < 0 || py >= inputImage.GetLength(1)) continue;
+                
+                int value = non_max_sup[px, py];
+
+                if(low_th <= value)
+                {
+                    result_image[px, py] = 255;
+                    if(value < high_th) // they actually need to be added because the pixel is not a top pixel
+                    {
+                        pixel_to_check.Enqueue(pixel.Up());
+                        pixel_to_check.Enqueue(pixel.Down());
+                        pixel_to_check.Enqueue(pixel.Left());
+                        pixel_to_check.Enqueue(pixel.Right());
+                    }
+                }
+            }
+        
+            return result_image;
+        }
     }
 }

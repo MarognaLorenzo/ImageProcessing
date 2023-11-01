@@ -541,11 +541,13 @@ namespace INFOIBV
                 for (int c = 0; c < inputImage.GetLength(0); c++)
                 {
                     if (inputImage[c, r] == 0 || res[c, r] != 0) continue; // looking for fg unlabeld pixels
-                    Queue<(int, int)> q = new Queue<(int, int)>();
-                    q.Enqueue((c, r));
+                    Queue<PixelPoint> q = new Queue<PixelPoint>();
+                    q.Enqueue(new PixelPoint(c, r));
                     while (q.Any()) // start labeling new area
                     {
-                        (int col, int row) = q.Dequeue(); // get pixel coords
+                        PixelPoint pixel = q.Dequeue(); // get pixel coords
+                        int col = pixel.x;
+                        int row = pixel.y;
                         if (col < 0 || col >= inputImage.GetLength(0) || row < 0 || row >= inputImage.GetLength(1))
                         {       // check if coords are valid
                             continue;
@@ -555,10 +557,10 @@ namespace INFOIBV
                             continue;
                         }
                         res[col, row] = id; // label and add neighbours to the queue
-                        q.Enqueue((col + 1, row));
-                        q.Enqueue((col - 1, row));
-                        q.Enqueue((col, row + 1));
-                        q.Enqueue((col, row - 1));
+                        q.Enqueue(pixel.Up());
+                        q.Enqueue(pixel.Down());
+                        q.Enqueue(pixel.Right());
+                        q.Enqueue(pixel.Left());
                     }
                     id++; // when labeling is finished, change label number
                 }

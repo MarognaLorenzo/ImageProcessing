@@ -22,11 +22,11 @@ namespace INFOIBV
         private sbyte[,] hPrewittfilter = new sbyte[3, 3] { { -1, 0, 1 },
                                              { -1, 0, 1 },
                                              { -1, 0, 1 } };
-        private sbyte[,] vSobelfilter = new sbyte[3, 3] { { -1, -2, -1 },
+        private sbyte[,] ySobelfilter = new sbyte[3, 3] { { -1, -2, -1 },
                                              {  0 , 0,  0 },
                                              {  1,  2,  1 } };
 
-        private sbyte[,] hSobelfilter = new sbyte[3, 3] { { -1, 0, 1 },
+        private sbyte[,] xSobelfilter = new sbyte[3, 3] { { -1, 0, 1 },
                                              { -2, 0, 2 },
                                              { -1, 0, 1 } };
 
@@ -174,11 +174,10 @@ namespace INFOIBV
 
 
             byte[,] g_scale_image = convertToGrayscale(Image);          // convert image to grayscale
-            byte[,] workingImage = g_scale_image;
-
-
-            // copy array to output Bitmap
-            List<Line> lines = peakFinding(g_scale_image, THRESHOLD); // find peaks
+            byte[,] contrast = adjustContrast(g_scale_image);
+            byte[,] edge_image = edgeMagnitude(contrast, xSobelfilter, ySobelfilter);
+            byte[,] workingImage = contrast;
+            List<Line> lines = peakFinding(edge_image, THRESHOLD); // find peaks
 
             List<List<Segment>> segments = new List<List<Segment>>();
             List<List<PixelPoint>> pixel_in_lines = new List<List<PixelPoint>>();
@@ -253,34 +252,6 @@ namespace INFOIBV
 
         private void houghTransformAngleLimitClick(object sender, EventArgs e)
         {
-            if (InputImage1 == null) return;                                 // get out if no input image
-            if (OutputImage != null) OutputImage.Dispose();                 // reset output image
-            Color[,] Image = new Color[InputImage1.Size.Width, InputImage1.Size.Height]; // create array to speed-up operations (Bitmap functions are very slow)
-
-            // copy input Bitmap to array            
-            for (int x = 0; x < InputImage1.Size.Width; x++)                 // loop over columns
-                for (int y = 0; y < InputImage1.Size.Height; y++)            // loop over rows
-                    Image[x, y] = InputImage1.GetPixel(x, y);                // set pixel color in array at (x,y)
-
-
-            byte[,] g_scale_image = convertToGrayscale(Image);          // convert image to grayscale
-
-            // copy array to output Bitmap
-
-            byte[,] workingImage = adjustContrast(houghAngleLimit(g_scale_image, 45, 90));
-            OutputImage = new Bitmap(workingImage.GetLength(0), workingImage.GetLength(1)); // create new output image
-
-            // copy array to output Bitmap
-            for (
-
-                int x = 0; x < workingImage.GetLength(0); x++)             // loop over columns
-                for (int y = 0; y < workingImage.GetLength(1); y++)         // loop over rows
-                {
-                    Color newColor = Color.FromArgb(workingImage[x, y], workingImage[x, y], workingImage[x, y]);
-                    OutputImage.SetPixel(x, y, newColor);                  // set the pixel color at coordinate (x,y)
-                }
-
-            pictureBoxOut.Image = (Image)OutputImage;                         // display output image
 
         }
 
@@ -391,7 +362,38 @@ namespace INFOIBV
             pictureBoxOut.Image = (Image)OutputImage;                         // display output image
         }
 
-        private void edgedetectionClick(object sender, EventArgs e)
+        private void CannyEdgeDetectionClick(object sender, EventArgs e)
+        {
+            if (InputImage1 == null) return;                                 // get out if no input image
+            if (OutputImage != null) OutputImage.Dispose();                 // reset output image
+            OutputImage = new Bitmap(InputImage1.Size.Width, InputImage1.Size.Height); // create new output image
+            Color[,] Image = new Color[InputImage1.Size.Width, InputImage1.Size.Height]; // create array to speed-up operations (Bitmap functions are very slow)
+
+            // copy input Bitmap to array            
+            for (int x = 0; x < InputImage1.Size.Width; x++)                 // loop over columns
+                for (int y = 0; y < InputImage1.Size.Height; y++)            // loop over rows
+                    Image[x, y] = InputImage1.GetPixel(x, y);                // set pixel color in array at (x,y)
+
+
+            byte[,] g_scale_image = convertToGrayscale(Image);          // convert image to grayscale
+
+            byte[,] edge = canny_edge_detection(g_scale_image);
+            byte[,] workingImage = adjustContrast(brightImage(edge, -50));
+
+            // copy array to output Bitmap
+            for (
+
+                int x = 0; x < workingImage.GetLength(0); x++)             // loop over columns
+                for (int y = 0; y < workingImage.GetLength(1); y++)         // loop over rows
+                {
+                    Color newColor = Color.FromArgb(workingImage[x, y], workingImage[x, y], workingImage[x, y]);
+                    OutputImage.SetPixel(x, y, newColor);                  // set the pixel color at coordinate (x,y)
+                }
+
+            pictureBoxOut.Image = (Image)OutputImage;                         // display output image
+        }
+
+        private void edgeMagnitudeClick(object sender, EventArgs e)
         {
             if (InputImage1 == null) return;                                 // get out if no input image
             if (OutputImage != null) OutputImage.Dispose();                 // reset output image
@@ -407,7 +409,7 @@ namespace INFOIBV
             byte[,] g_scale_image = convertToGrayscale(Image);          // convert image to grayscale
 
             byte[,] edge = edgeMagnitude(g_scale_image, hPrewittfilter, vPrewittfilter);
-            byte[,] workingImage = edge;
+            byte[,] workingImage = adjustContrast(brightImage(edge, -50));
 
             // copy array to output Bitmap
             for (
@@ -447,7 +449,7 @@ namespace INFOIBV
 
             byte[,] g_scale_image = convertToGrayscale(Image);          // convert image to grayscale
             byte[,] contrast = adjustContrast(g_scale_image);
-            byte[,] edge_image = edgeMagnitude(contrast, hSobelfilter, vSobelfilter);
+            byte[,] edge_image = edgeMagnitude(contrast, xSobelfilter, ySobelfilter);
             byte[,] workingImage = contrast;
             List<Line> lines = peakFinding(edge_image, THRESHOLD); // find peaks
 
@@ -468,8 +470,8 @@ namespace INFOIBV
                 // blob detection
                 
                 byte[,] crop = cropImage(contrast, region);
-                byte[,] reAdjust = adjustContrast(crop);
-                region.blobs = blobFinding(reAdjust, 0.2, ref workingImage);
+                //byte[,] reAdjust = adjustContrast(crop);
+                region.blobs = blobFinding(crop, 0.2, ref workingImage);
                 
                 for (int i = 0; i < region.blobs.Count; i++)
                 {
@@ -879,6 +881,23 @@ namespace INFOIBV
             public String toString()
             {
                 return "Point => x: " + x + ", " + y + ")";
+            }
+
+            public PixelPoint Up()
+            {
+                return new PixelPoint(x, y + 1);
+            }
+            public PixelPoint Down()
+            {
+                return new PixelPoint(x, y - 1);
+            }
+            public PixelPoint Left()
+            {
+                return new PixelPoint(x + 1, y);
+            }
+            public PixelPoint Right()
+            {
+                return new PixelPoint(x - 1, y);
             }
         }
     }

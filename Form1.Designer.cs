@@ -47,7 +47,7 @@
             this.HoughCirclesButton = new System.Windows.Forms.Button();
             this.CloseButton = new System.Windows.Forms.Button();
             this.NumberBox = new System.Windows.Forms.TextBox();
-            this.HTAngleLimit = new System.Windows.Forms.Button();
+            this.CannyEdgeDetectionButton = new System.Windows.Forms.Button();
             this.FindSocketButton = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBoxIn1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBoxIn2)).BeginInit();
@@ -231,7 +231,7 @@
             this.CloseButton.TabIndex = 18;
             this.CloseButton.Text = "EdgeDetection";
             this.CloseButton.UseVisualStyleBackColor = true;
-            this.CloseButton.Click += new System.EventHandler(this.edgedetectionClick);
+            this.CloseButton.Click += new System.EventHandler(this.edgeMagnitudeClick);
             // 
             // NumberBox
             // 
@@ -241,16 +241,16 @@
             this.NumberBox.TabIndex = 19;
             this.NumberBox.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.NumberBox_KeyPress);
             // 
-            // HTAngleLimit
+            // CannyEdgeDetectionButton
             // 
-            this.HTAngleLimit.Location = new System.Drawing.Point(770, 128);
-            this.HTAngleLimit.Margin = new System.Windows.Forms.Padding(4);
-            this.HTAngleLimit.Name = "HTAngleLimit";
-            this.HTAngleLimit.Size = new System.Drawing.Size(132, 27);
-            this.HTAngleLimit.TabIndex = 20;
-            this.HTAngleLimit.Text = "HTAngleLimit";
-            this.HTAngleLimit.UseVisualStyleBackColor = true;
-            this.HTAngleLimit.Click += new System.EventHandler(this.houghTransformAngleLimitClick);
+            this.CannyEdgeDetectionButton.Location = new System.Drawing.Point(770, 128);
+            this.CannyEdgeDetectionButton.Margin = new System.Windows.Forms.Padding(4);
+            this.CannyEdgeDetectionButton.Name = "CannyEdgeDetectionButton";
+            this.CannyEdgeDetectionButton.Size = new System.Drawing.Size(132, 27);
+            this.CannyEdgeDetectionButton.TabIndex = 20;
+            this.CannyEdgeDetectionButton.Text = "Canny";
+            this.CannyEdgeDetectionButton.UseVisualStyleBackColor = true;
+            this.CannyEdgeDetectionButton.Click += new System.EventHandler(this.CannyEdgeDetectionClick);
             // 
             // FindSocketButton
             // 
@@ -269,7 +269,7 @@
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1924, 1053);
             this.Controls.Add(this.FindSocketButton);
-            this.Controls.Add(this.HTAngleLimit);
+            this.Controls.Add(this.CannyEdgeDetectionButton);
             this.Controls.Add(this.CloseButton);
             this.Controls.Add(this.NumberBox);
             this.Controls.Add(this.HoughCirclesButton);
@@ -322,7 +322,7 @@
         private System.Windows.Forms.Button HoughCirclesButton;
         private System.Windows.Forms.Button CloseButton;
         private System.Windows.Forms.TextBox NumberBox;
-        private System.Windows.Forms.Button HTAngleLimit;
+        private System.Windows.Forms.Button CannyEdgeDetectionButton;
         private System.Windows.Forms.Button FindSocketButton;
     }
 }
