@@ -749,7 +749,7 @@ namespace INFOIBV
                     int y_off = directions[direction[c, r]][1];
 
                     if (c + x_off >= inputImage.GetLength(0) || c + x_off < 0 || r + y_off >= inputImage.GetLength(1) || r + y_off < 0) continue;
-                    non_max_sup[c, r] = (magnitude[c, r] < magnitude[c + x_off, r + y_off]) ? 0 : 255;
+                    non_max_sup[c, r] = (magnitude[c, r] < magnitude[c + x_off, r + y_off]) ? 0 : magnitude[c, r];
                 }
 
 
@@ -782,7 +782,7 @@ namespace INFOIBV
                     }
                 }
             }
-            return adjustContrast(non_max_sup);
+            return result_image;
         }
 
 

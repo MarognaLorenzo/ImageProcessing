@@ -49,6 +49,7 @@
             this.NumberBox = new System.Windows.Forms.TextBox();
             this.CannyEdgeDetectionButton = new System.Windows.Forms.Button();
             this.FindSocketButton = new System.Windows.Forms.Button();
+            this.CannyLineDetectionButton = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBoxIn1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBoxIn2)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBoxOut)).BeginInit();
@@ -263,11 +264,23 @@
             this.FindSocketButton.UseVisualStyleBackColor = true;
             this.FindSocketButton.Click += new System.EventHandler(this.FindSocketClick);
             // 
+            // CannyLineDetectionButton
+            // 
+            this.CannyLineDetectionButton.Location = new System.Drawing.Point(770, 63);
+            this.CannyLineDetectionButton.Margin = new System.Windows.Forms.Padding(4);
+            this.CannyLineDetectionButton.Name = "CannyLineDetectionButton";
+            this.CannyLineDetectionButton.Size = new System.Drawing.Size(132, 27);
+            this.CannyLineDetectionButton.TabIndex = 22;
+            this.CannyLineDetectionButton.Text = "Canny Line Detection";
+            this.CannyLineDetectionButton.UseVisualStyleBackColor = true;
+            this.CannyLineDetectionButton.Click += new System.EventHandler(this.CannyLineDetectionClick);
+            // 
             // INFOIBV
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1924, 1053);
+            this.Controls.Add(this.CannyLineDetectionButton);
             this.Controls.Add(this.FindSocketButton);
             this.Controls.Add(this.CannyEdgeDetectionButton);
             this.Controls.Add(this.CloseButton);
@@ -324,5 +337,6 @@
         private System.Windows.Forms.TextBox NumberBox;
         private System.Windows.Forms.Button CannyEdgeDetectionButton;
         private System.Windows.Forms.Button FindSocketButton;
+        private System.Windows.Forms.Button CannyLineDetectionButton;
     }
 }

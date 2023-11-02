@@ -14,45 +14,9 @@ namespace INFOIBV
         private Bitmap InputImage1;
         private Bitmap InputImage2;
         private Bitmap OutputImage;
-        private const double HOUGH_STEP = 0.3;
-        private sbyte[,] vPrewittfilter = new sbyte[3, 3] { { -1, -1, -1 },
-                                             {  0 , 0,  0 },
-                                             {  1,  1,  1 } };
-
-        private sbyte[,] hPrewittfilter = new sbyte[3, 3] { { -1, 0, 1 },
-                                             { -1, 0, 1 },
-                                             { -1, 0, 1 } };
-        private sbyte[,] ySobelfilter = new sbyte[3, 3] { { -1, -2, -1 },
-                                             {  0 , 0,  0 },
-                                             {  1,  2,  1 } };
-
-        private sbyte[,] xSobelfilter = new sbyte[3, 3] { { -1, 0, 1 },
-                                             { -2, 0, 2 },
-                                             { -1, 0, 1 } };
-
-        private double THRESHOLD = 0.6;
-        private int CLOSE_DIM = 11;
-        private int MINIMUM_THRESHOLD = 70;
-        private int MINIMUM_LENGHT = 20;
-        private int MAXIMUM_GAP = 5;
-        IDictionary<int, (int, int)> contourDict = new Dictionary<int, (int, int)>()
-        {
-            { 0, (1,0)},
-            { 7, (1,-1)},
-            { 6, (0,-1)},
-            { 5, (-1,-1)},
-            { 4, (-1,0)},
-            { 3, (-1,1)},
-            { 2, (0,1)},
-            { 1, (1,1)},
-        };
-
         public INFOIBV()
         {
-            foreach(var  el in hPrewittfilter)
-            {
-                Console.WriteLine(el.ToString());
-            }
+
             InitializeComponent();
         }
 
@@ -176,6 +140,61 @@ namespace INFOIBV
             byte[,] g_scale_image = convertToGrayscale(Image);          // convert image to grayscale
             byte[,] contrast = adjustContrast(g_scale_image);
             byte[,] edge_image = edgeMagnitude(contrast, xSobelfilter, ySobelfilter);
+            byte[,] workingImage = contrast;
+            List<Line> lines = peakFinding(edge_image, THRESHOLD); // find peaks
+
+            List<List<Segment>> segments = new List<List<Segment>>();
+            List<List<PixelPoint>> pixel_in_lines = new List<List<PixelPoint>>();
+
+            foreach (Line line in lines) // for every detected lines find segments and whole line ( easier for computation and precision)
+            {
+                (List<Segment> segmentsToAdd, List<PixelPoint> pixels_on_line) = hough_line_detection(workingImage, line.r, line.theta, MINIMUM_THRESHOLD, MINIMUM_LENGHT, MAXIMUM_GAP);
+                segments.Add(segmentsToAdd);
+                pixel_in_lines.Add(pixels_on_line);
+            }
+
+            List<PixelPoint> crossing_coords = hough_crossing_line(lines, workingImage); // find crossing points
+
+
+            OutputImage = new Bitmap(workingImage.GetLength(0), workingImage.GetLength(1)); // create new output image
+
+            // copy array to output Bitmap
+            for (
+
+                int x = 0; x < workingImage.GetLength(0); x++)             // loop over columns
+                for (int y = 0; y < workingImage.GetLength(1); y++)         // loop over rows
+                {
+                    Color newColor = Color.FromArgb(workingImage[x, y], workingImage[x, y], workingImage[x, y]);
+                    OutputImage.SetPixel(x, y, newColor);                  // set the pixel color at coordinate (x,y)
+                }
+
+            // VISUALIZE RED LINES
+            for (int i = 0; i < segments.Count; i++)
+                hough_visualization(segments[i], ref OutputImage, pixel_in_lines[i], Color.Red);
+
+            //VISUALIZE GREEN DOTS
+            hough_visualize_crossing(crossing_coords, ref OutputImage);
+
+            pictureBoxOut.Image = (Image)OutputImage;                         // display output image
+
+        }
+
+        private void CannyLineDetectionClick(object sender, EventArgs e)
+        {
+            if (InputImage1 == null) return;                                 // get out if no input image
+            if (OutputImage != null) OutputImage.Dispose();                 // reset output image
+            OutputImage = new Bitmap(InputImage1.Size.Width, InputImage1.Size.Height); // create new output image
+            Color[,] Image = new Color[InputImage1.Size.Width, InputImage1.Size.Height]; // create array to speed-up operations (Bitmap functions are very slow)
+
+            // copy input Bitmap to array            
+            for (int x = 0; x < InputImage1.Size.Width; x++)                 // loop over columns
+                for (int y = 0; y < InputImage1.Size.Height; y++)            // loop over rows
+                    Image[x, y] = InputImage1.GetPixel(x, y);                // set pixel color in array at (x,y)
+
+
+            byte[,] g_scale_image = convertToGrayscale(Image);          // convert image to grayscale
+            byte[,] contrast = adjustContrast(g_scale_image);
+            byte[,] edge_image = canny_edge_detection(contrast, CANNY_EDGE_SIZE, CANNY_SIGMA, LOW_TH, HIGH_TH);
             byte[,] workingImage = contrast;
             List<Line> lines = peakFinding(edge_image, THRESHOLD); // find peaks
 
@@ -377,7 +396,7 @@ namespace INFOIBV
 
             byte[,] g_scale_image = convertToGrayscale(Image);          // convert image to grayscale
 
-            byte[,] edge = canny_edge_detection(g_scale_image, 3, 3, 50, 100);
+            byte[,] edge = canny_edge_detection(g_scale_image, CANNY_EDGE_SIZE, CANNY_SIGMA, LOW_TH, HIGH_TH);
             byte[,] workingImage = edge;
 
             // copy array to output Bitmap
@@ -449,7 +468,8 @@ namespace INFOIBV
 
             byte[,] g_scale_image = convertToGrayscale(Image);          // convert image to grayscale
             byte[,] contrast = adjustContrast(g_scale_image);
-            byte[,] edge_image = edgeMagnitude(contrast, xSobelfilter, ySobelfilter);
+            //byte[,] edge_image = edgeMagnitude(contrast, xSobelfilter, ySobelfilter);\
+            byte[,] edge_image = canny_edge_detection(contrast, CANNY_EDGE_SIZE, CANNY_SIGMA, LOW_TH, HIGH_TH);
             byte[,] workingImage = contrast;
             List<Line> lines = peakFinding(edge_image, THRESHOLD); // find peaks
 
