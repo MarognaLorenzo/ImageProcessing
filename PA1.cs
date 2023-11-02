@@ -319,11 +319,8 @@ namespace INFOIBV
             int M = inputImage.GetLength(0);
             int N = inputImage.GetLength(1);
             float sum = 0;
-            for (int i = 0; i < M; i++)
-                for (int j = 0; j < N; j++)
-                    sum += inputImage[i, j];
-            float res = sum / (N * M);
-            return res;
+            foreach (byte val in inputImage) sum += val;
+            return sum / ( N * M );
         }
 
 
@@ -672,11 +669,11 @@ namespace INFOIBV
 
         }
 
-        private byte[,] canny_edge_detection(byte[,] inputImage, int sizeGaussiagn, int sigma, int low_th, int high_th)
+        private byte[,] canny_edge_detection(byte[,] inputImage, int sizeGaussian, int sigma, int low_th, int high_th)
         {
-            inputImage = convolveImage(inputImage, createGaussianFilter(sizeGaussiagn, sigma), false);
-            byte[,] Gx = convolveImage(inputImage,convertKernel(xSobelfilter), false); // gradiente orizzontale, linee verticali
-            byte[,] Gy= convolveImage(inputImage,convertKernel(ySobelfilter), false);  // gradiente verticale, linee orizzontali
+            inputImage = convolveImage(inputImage, createGaussianFilter(sizeGaussian, sigma), false);
+            float[,] Gx = compute_gradient(inputImage, xSobelfilter); // gradiente orizzontale, linee verticali
+            float[,] Gy= compute_gradient(inputImage, ySobelfilter);  // gradiente verticale, linee orizzontali
             int[,] magnitude = new int[inputImage.GetLength(0), inputImage.GetLength(1)];
             int[,] non_max_sup = new int[inputImage.GetLength(0), inputImage.GetLength(1)];
 
@@ -695,6 +692,8 @@ namespace INFOIBV
                         direction[c, r] = 9;
                         continue;
                     }
+                    double x = Gx[c, r];
+                    double y = Gy[c, r];
                     double vx = Gx[c, r] * cosTheta - Gy[c, r] * sinTheta;
                     double vy = Gx[c, r] * sinTheta + Gy[c, r] * cosTheta;
 
@@ -702,7 +701,10 @@ namespace INFOIBV
                     {
                         if(vy >= 0)
                         {
-                            if (vx >= vy) direction[c, r] = 0;
+                            if (vx >= vy)
+                            {
+                                direction[c, r] = 0;
+                            }
                             else direction[c, r] = 1;
                         }
                         else
@@ -715,7 +717,10 @@ namespace INFOIBV
                     {
                         if (vy >= 0)
                         {
-                            if (-vx >= vy) direction[c, r] = 3;
+                            if (-vx >= vy)
+                            {
+                                direction[c, r] = 3;
+                            }
                             else direction[c, r] = 2;
                         }
                         else
@@ -725,48 +730,27 @@ namespace INFOIBV
                         }
                     }
                 }
+            int[][] directions = {
+                new int[] { 1, 0 },   // Destra
+                new int[] { 1, 1 },   // Diagonale in alto a destra
+                new int[] { 0, 1 },   // Sopra
+                new int[] { -1, 1 },  // Diagonale in alto a sinistra
+                new int[] { -1, 0 },  // Sinistra
+                new int[] { -1, -1 }, // Diagonale in basso a sinistra
+                new int[] { 0, -1 },  // Sotto
+                new int[] { 1, -1 }   // Diagonale in basso a destra
+            };
 
             for (int c = 0; c < inputImage.GetLength(0); c++)
                 for (int r = 0; r < inputImage.GetLength(1); r++)
                 {
-                    int dir = direction[c, r];
-                    if (dir > 3) continue;
-                    int x_off, y_off;
-                    switch (dir)
-                    {
-                        case 0:
-                            x_off = 1;
-                            y_off = 0;
-                            break;
+                    if (direction[c, r] == 9) continue;
+                    int x_off = directions[direction[c, r]][0];
+                    int y_off = directions[direction[c, r]][1];
 
-                        case 1:
-                            x_off = 1;
-                            y_off = 1;
-                            break;
-
-                        case 2:
-                            x_off = 0;
-                            y_off = 1;
-                            break;
-
-                        case 3:
-                            x_off = -1;
-                            y_off = 1;
-                            break;
-
-                        default:
-                            throw new Exception("I should never reach this point!");
-                            // Gestione del caso in cui dir non corrisponde a nessuna delle casistiche sopra
-                    }
                     if (c + x_off >= inputImage.GetLength(0) || c + x_off < 0 || r + y_off >= inputImage.GetLength(1) || r + y_off < 0) continue;
-                    non_max_sup[c,r] = (magnitude[c,r] <= magnitude[c + x_off, r + y_off]) ? 0 : magnitude[c,r];
-                    x_off = - x_off; y_off = - y_off;
-                    if (c + x_off >= inputImage.GetLength(0) || c + x_off < 0 || r + y_off >= inputImage.GetLength(1) || r + y_off < 0) continue;
-                    non_max_sup[c, r] = (magnitude[c, r] <= magnitude[c + x_off, r + y_off]) ? 0 : magnitude[c, r];
-
+                    non_max_sup[c, r] = (magnitude[c, r] < magnitude[c + x_off, r + y_off]) ? 0 : 255;
                 }
-
-            byte[,] contr = adjustContrast(non_max_sup);
 
 
             Queue<PixelPoint> pixel_to_check = new Queue<PixelPoint>() ;
@@ -781,8 +765,8 @@ namespace INFOIBV
                 PixelPoint pixel = pixel_to_check.Dequeue();
                 int px = pixel.x;
                 int py = pixel.y;
-                if (result_image[px, py] == 255) continue;
                 if (px < 0 || px >= inputImage.GetLength(0) || py < 0 || py >= inputImage.GetLength(1)) continue;
+                if (result_image[px, py] == 255) continue;
                 
                 int value = non_max_sup[px, py];
 
@@ -798,8 +782,53 @@ namespace INFOIBV
                     }
                 }
             }
-        
-            return result_image;
+            return adjustContrast(non_max_sup);
+        }
+
+
+        private float[,] compute_gradient(byte[,] inputImage, sbyte[,] starting_filter)
+        {
+            float[,] filter = convertKernel(starting_filter);
+            // Kernel processing
+            int M = inputImage.GetLength(0); //Width
+            int N = inputImage.GetLength(1); // Height
+            int k_dim = kernel_processing(filter);
+            int hotspot = (k_dim - 1) / 2; // Center of the kernel
+
+            // create temporary grayscale image
+            float[,] tempImage = new float[inputImage.GetLength(0), inputImage.GetLength(1)];
+
+            //For out of the border Pixels
+            float mean_grey_value = calc_mean_value(inputImage);
+
+            // setup progress bar
+            progressBar.Visible = true;
+            progressBar.Minimum = 1;
+            progressBar.Maximum = InputImage1.Size.Width * InputImage1.Size.Height;
+            progressBar.Value = 1;
+            progressBar.Step = 1;
+
+            //Correlation filtering
+            for (int row = 0; row < N; row++)
+                for (int col = 0; col < M; col++)
+                {
+                    // Apply filter on single pixel
+                    float h_sum = 0; // sum all the partial values of the kernel on the image
+
+                    for (int frow = -hotspot; frow <= hotspot; frow++)// for each coordinate of the kernel
+                        for (int fcol = -hotspot; fcol <= hotspot; fcol++)
+                        {
+                            int r_tot = row + frow; // computing position of the pixel around hotspot
+                            int c_tot = col + fcol;
+
+                            h_sum += filter[frow + hotspot, fcol + hotspot] *  // sum the value to h_sum (if pixel is out of bound we use mean gray value)
+                                ((r_tot < 0 || r_tot >= N || c_tot < 0 || c_tot >= M) ? mean_grey_value : inputImage[c_tot, r_tot]);
+                        }
+                    tempImage[col, row] = h_sum; // assign the value
+                    progressBar.PerformStep();
+                }
+            progressBar.Visible = false;
+            return tempImage;
         }
     }
 }
