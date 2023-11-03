@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using System.Runtime.InteropServices.WindowsRuntime;
+using System.Security.Permissions;
 using System.Windows.Forms;
 
 
@@ -468,10 +469,12 @@ namespace INFOIBV
 
             byte[,] g_scale_image = convertToGrayscale(Image);          // convert image to grayscale
             byte[,] contrast = adjustContrast(g_scale_image);
-            //byte[,] edge_image = edgeMagnitude(contrast, xSobelfilter, ySobelfilter);\
-            byte[,] edge_image = canny_edge_detection(contrast, CANNY_EDGE_SIZE, CANNY_SIGMA, LOW_TH, HIGH_TH);
+            byte[,] edge_image = edgeMagnitude(contrast, xSobelfilter, ySobelfilter);
+            byte[,] canny_edge_image = canny_edge_detection(contrast, CANNY_EDGE_SIZE, CANNY_SIGMA, LOW_TH, HIGH_TH);
             byte[,] workingImage = contrast;
-            List<Line> lines = peakFinding(edge_image, THRESHOLD); // find peaks
+            List<Line> lines_canny = peakFinding(canny_edge_image, THRESHOLD); // find peaks
+            List<Line> other_lines = peakFinding(edge_image, THRESHOLD); // More peaks
+            List<Line> lines = lines_canny.Concat(other_lines).ToList();
 
 
 
@@ -503,14 +506,14 @@ namespace INFOIBV
                     Console.WriteLine("Socket not found");
                     continue;
                 }
-                Console.WriteLine("Blob in this region: ");
+                //Console.WriteLine("Blob in this region: ");
                 foreach(var blob in region.blobs) Console.WriteLine(blob.toString());
                 PixelPoint blob_baricenter = baricenterOf(region.blobs);
-                Console.WriteLine("Blobs baricenter : " + blob_baricenter.toString());
+                //Console.WriteLine("Blobs baricenter : " + blob_baricenter.toString());
 
-                Console.WriteLine(region.toString());
+                //Console.WriteLine(region.toString());
                 PixelPoint region_baricenter = region.get_baricenter();
-                Console.WriteLine("Region baricenter: " + region_baricenter.toString());
+                //Console.WriteLine("Region baricenter: " + region_baricenter.toString());
                 double euc = blob_baricenter.euclidian_distance(region_baricenter);
                 if (euc < 30){ // SOCKET FOUND
                     sockets.Add(region);
@@ -554,8 +557,8 @@ namespace INFOIBV
 
             //// VISUALIZE square
             //for (int i = 0; i < segments.Count; i++)
-            //    if(grid_lines_index.Exists(x => x == i))
-            //        hough_visualization(segments[i], ref OutputImage, pixel_in_lines[i], Color.Blue);
+            //    if (grid_lines_index.Exists(x => x == i))
+            //        hough_visualization(segments[i], ref OutputImage, pixel_in_lines[i], Color.Yellow);
 
 
             ////Vertices of the parallel lines
@@ -564,7 +567,7 @@ namespace INFOIBV
             //foreach (RectangularRegion region in regions)
             //    hough_visualize_crossing(region.get_creation_point(), ref OutputImage, false, Color.Red);
 
-            foreach(var socket in sockets)
+            foreach (var socket in sockets)
                 foreach (var pixel in socket.generate_rectangle())
                     OutputImage.SetPixel(pixel.x, pixel.y, Color.Blue);
             //Blo
@@ -590,7 +593,6 @@ namespace INFOIBV
             byte[,] thresholded = thresholdImage(inputImage, (int)(threshold * 255));
             byte[,] invert = invertImage(thresholded);
             byte[,] open_invert = openImage(invert, createStructuringElement(5, SEShape.Plus), true);
-
             byte[,] flood = floodFill(open_invert); // label all regions with an incremental ID
             
             return findCentroids(flood);
@@ -692,14 +694,14 @@ namespace INFOIBV
             int max = accum.Max();
             List<int> chosen_index = new List<int>();
 
-            for (int i = 0; i < pairable_lines.Count; i++)
+            for (int i = 0; i < accum.Count; i++)
                 if (accum[i] == max)
                     chosen_index.Add(i);
 
 
             List<Line> result = new List<Line>();
 
-            foreach(int index in chosen_index) result.Add(lines[index]);
+            foreach(int index in chosen_index) result.Add(lines[index]);    
             
             return (result, chosen_index);
         }
@@ -859,7 +861,7 @@ namespace INFOIBV
             {
                 double diff = Math.Abs(line1.theta - this.theta);
                 if (diff < 5 && Math.Abs(line1.r - this.r) < 4) return true;
-                if (diff > 175 && Math.Abs(line1.r + this.r) < 5) return true;
+                if (diff > 175 && Math.Abs(line1.r + this.r) < 4) return true;
 
                 return false;
             }
@@ -876,11 +878,22 @@ namespace INFOIBV
             public bool isDistantParallelWith(Line line1)
             {
                 double diff = Math.Abs(line1.theta - this.theta);
-                if (diff < 5 && Math.Abs(line1.r - this.r) > 25) return true;
-                if (diff > 175 && Math.Abs(line1.r + this.r) > 25) return true;
+                if (diff < 5 && Math.Abs(line1.r - this.r) > 10) return true;
+                if (diff > 175 && Math.Abs(line1.r + this.r) > 10) return true;
                 return false;
             }
-
+            public bool isAlmostVertical ()
+            {
+                return theta < 5 || theta > 175;
+            }
+            public bool isAlmostHorizontal()
+            {
+                return 75 < theta && theta < 85;
+            }
+            public bool isAxisAligned()
+            {
+                return this.isAlmostVertical() || this.isAlmostHorizontal();
+            }
 
 
         }

@@ -683,54 +683,8 @@ namespace INFOIBV
 
             // Calcolo delle nuove componenti ruotate
             byte[,] direction = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
-            for(int c = 0; c < inputImage.GetLength(0); c++)
-                for(int r = 0; r < inputImage.GetLength(1); r++)
-                {
-                    magnitude[c,r] = (int) Math.Sqrt(Gx[c,r] * Gx[c,r] + Gy[c, r] * Gy[c, r]);
-                    if (magnitude[c, r] == 0)
-                    {
-                        direction[c, r] = 9;
-                        continue;
-                    }
-                    double x = Gx[c, r];
-                    double y = Gy[c, r];
-                    double vx = Gx[c, r] * cosTheta - Gy[c, r] * sinTheta;
-                    double vy = Gx[c, r] * sinTheta + Gy[c, r] * cosTheta;
-
-                    if(vx >= 0)
-                    {
-                        if(vy >= 0)
-                        {
-                            if (vx >= vy)
-                            {
-                                direction[c, r] = 0;
-                            }
-                            else direction[c, r] = 1;
-                        }
-                        else
-                        {
-                            if (vx >= -vy) direction[c, r] = 7;
-                            else direction[c, r] = 6;
-                        }
-                    }
-                    else
-                    {
-                        if (vy >= 0)
-                        {
-                            if (-vx >= vy)
-                            {
-                                direction[c, r] = 3;
-                            }
-                            else direction[c, r] = 2;
-                        }
-                        else
-                        {
-                            if (-vx >= -vy) direction[c, r] = 4;
-                            else direction[c, r] = 5;
-                        }
-                    }
-                }
-            int[][] directions = {
+            set_directions();
+            int[][] direction_offset = {
                 new int[] { 1, 0 },   // Destra
                 new int[] { 1, 1 },   // Diagonale in alto a destra
                 new int[] { 0, 1 },   // Sopra
@@ -740,13 +694,14 @@ namespace INFOIBV
                 new int[] { 0, -1 },  // Sotto
                 new int[] { 1, -1 }   // Diagonale in basso a destra
             };
+            
 
             for (int c = 0; c < inputImage.GetLength(0); c++)
                 for (int r = 0; r < inputImage.GetLength(1); r++)
                 {
                     if (direction[c, r] == 9) continue;
-                    int x_off = directions[direction[c, r]][0];
-                    int y_off = directions[direction[c, r]][1];
+                    int x_off = direction_offset[direction[c, r]][0];
+                    int y_off = direction_offset[direction[c, r]][1];
 
                     if (c + x_off >= inputImage.GetLength(0) || c + x_off < 0 || r + y_off >= inputImage.GetLength(1) || r + y_off < 0) continue;
                     non_max_sup[c, r] = (magnitude[c, r] < magnitude[c + x_off, r + y_off]) ? 0 : magnitude[c, r];
@@ -783,6 +738,58 @@ namespace INFOIBV
                 }
             }
             return result_image;
+
+
+            void set_directions()
+            {
+                for (int c = 0; c < inputImage.GetLength(0); c++)
+                    for (int r = 0; r < inputImage.GetLength(1); r++)
+                    {
+                        magnitude[c, r] = (int)Math.Sqrt(Gx[c, r] * Gx[c, r] + Gy[c, r] * Gy[c, r]);
+                        if (magnitude[c, r] == 0)
+                        {
+                            direction[c, r] = 9;
+                            continue;
+                        }
+                        double x = Gx[c, r];
+                        double y = Gy[c, r];
+                        double vx = Gx[c, r] * cosTheta - Gy[c, r] * sinTheta;
+                        double vy = Gx[c, r] * sinTheta + Gy[c, r] * cosTheta;
+
+                        if (vx >= 0)
+                        {
+                            if (vy >= 0)
+                            {
+                                if (vx >= vy)
+                                {
+                                    direction[c, r] = 0;
+                                }
+                                else direction[c, r] = 1;
+                            }
+                            else
+                            {
+                                if (vx >= -vy) direction[c, r] = 7;
+                                else direction[c, r] = 6;
+                            }
+                        }
+                        else
+                        {
+                            if (vy >= 0)
+                            {
+                                if (-vx >= vy)
+                                {
+                                    direction[c, r] = 3;
+                                }
+                                else direction[c, r] = 2;
+                            }
+                            else
+                            {
+                                if (-vx >= -vy) direction[c, r] = 4;
+                                else direction[c, r] = 5;
+                            }
+                        }
+                    }
+            }
         }
 
 
