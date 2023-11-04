@@ -455,6 +455,10 @@ namespace INFOIBV
         //        Book II - B.1.4. You may assume there is only a single shape in the image,
         //        or return only the list of the first boundary that you encounter. (10 points).
 
+        /* traceBoundary: calculates the boundary of the first region it can find in a binary image
+         * input: binary single channel image
+         * output: List of directions which can be used to build the countour of the region back
+         */
         List<int> traceBoundary(byte[,] inputImage)
         {
             (int, int) pixel = (-10, -10);
@@ -525,7 +529,6 @@ namespace INFOIBV
                 }
             }
         }
-
 
         /*
         * floodFill: takes as input a binary image and returns a new image with 0 value for bg pixel and id value for pixels labeled with id
