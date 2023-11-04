@@ -57,38 +57,49 @@ namespace INFOIBV
             return newImg2;
         }
 
-
+        //peak Finiding: returns a list of lines giveng a starting image and a certain threshold. Hough transform is applied automatically
         List<Line> peakFinding(byte[,] inputImage, double threshold)
         {
             double maxR = Math.Sqrt(Math.Pow(inputImage.GetLength(0), 2) + Math.Pow(inputImage.GetLength(1), 2)); // half diagonal of the image
 
+            //COMPUTING TRANSFORM AND FINDING REGIONS
             int[,] transf = houghTransform(inputImage);
             byte[,] contrast = adjustContrast(transf);// to get value in range 0 - 255
+
             byte[,] thresholded = thresholdImage(contrast, (int)(threshold * 255));
             byte[,] close = closeImage(thresholded, createStructuringElement(CLOSE_DIM, SEShape.Square), isBinary(thresholded));
-            byte[,] flood = floodFill(close); // label all regions with an incremental ID
 
+            // label all regions with an incremental ID
+            byte[,] flood = floodFill(close); 
+
+
+            // FIND CENTROIDS
             IDictionary<int, (int count, int sumx, int sumy)> map = new Dictionary<int, (int, int, int)>();// data structure for finding centroids x and y position
 
             for (int c = 0; c < flood.GetLength(0); c++) // find centroids
                 for (int r = 0; r < flood.GetLength(1); r++)
                 {
-                    if (flood[c, r] == 0) continue; // bg pixels are not important
+                    // bg pixels are not important
+                    if (flood[c, r] == 0) continue;
+                    
+                    //insert of increment the values of sums
                     (int a, int b, int c) elem = (0, 0, 0);
                     if (map.ContainsKey(flood[c, r])) elem = map[flood[c, r]];
                     elem = (elem.a + 1, elem.b + c, elem.c + r);
+
+                    //assign the value back
                     map[flood[c, r]] = elem;
                 }
 
-
+            //INTERPRETE THE RESULTS
             List<Line> lines = new List<Line>();
             foreach (var kv in map)// for each kea value in the dictionary with centroids sums and count of pixels get the average and add it to the result
             {
-                double T = ((double)kv.Value.sumx) / kv.Value.count * 180 / 500;
-                double R = (((double)kv.Value.sumy) / kv.Value.count * maxR / 500) - maxR / 2;
-                //Console.WriteLine("R:" + R + " - T: " + T + "count:" + kv.Value.count);
-                lines.Add(new Line(R, T));
+                double r = (((double)kv.Value.sumy) / kv.Value.count * maxR / 500) - maxR / 2;
+                double theta = ((double)kv.Value.sumx) / kv.Value.count * 180 / 500;
+                lines.Add(new Line(r, theta));
             }
+
             return lines;
         }
 
@@ -138,7 +149,6 @@ namespace INFOIBV
                 }
 
                 pixels_in_line_set.Add(math_to_image(image_center, (x, y < 0 ? y : y + 1)));
-                //Console.WriteLine((x ,y));
                 x += x_increment;
                 y += y_increment;
             }
@@ -155,7 +165,6 @@ namespace INFOIBV
             new_segment.clear();
             foreach (PixelPoint line_pixel in pixels_in_line_list)
             {
-                //inputImage[line_pixel.c, line_pixel.r] = 255;
 
                 if (inputImage[line_pixel.x, line_pixel.y] >= (binary ? 255 : minimum_intensity_threshold))
                 {       // pixel on
@@ -278,20 +287,23 @@ namespace INFOIBV
 
         }
 
-        void hough_visualize_crossing(List<PixelPoint> crossing_coords, ref Bitmap inputImage)
+        // hough_visualize_crossing: visualize every point in the list with a plus-shaped marker and the choosen color
+        void hough_visualize_crossing(List<PixelPoint> crossing_coords, ref Bitmap inputImage, Color color)
         {
-            foreach (PixelPoint point in crossing_coords) // visualize every crossing point with a plus-shaped marker
+            foreach (PixelPoint point in crossing_coords) 
             {
                 if (point.x < 0 || point.x >= inputImage.Width || point.y < 0 || point.y >= inputImage.Height) continue;
 
                 if (inputImage.GetPixel(point.x, point.y).R != 255) continue;
-                inputImage.SetPixel(point.x, point.y, Color.Green);
-                if (point.x + 1 < inputImage.Width) inputImage.SetPixel(point.x + 1, point.y, Color.Green);
-                if (point.x - 1 >= 0) inputImage.SetPixel(point.x - 1, point.y, Color.Green);
-                if (point.y + 1 < inputImage.Height) inputImage.SetPixel(point.x, point.y + 1, Color.Green);
-                if (point.y - 1 >= 0) inputImage.SetPixel(point.x, point.y - 1, Color.Green);
+                inputImage.SetPixel(point.x, point.y, color);
+                if (point.x + 1 < inputImage.Width) inputImage.SetPixel(point.x + 1, point.y, color);
+                if (point.x - 1 >= 0) inputImage.SetPixel(point.x - 1, point.y, color);
+                if (point.y + 1 < inputImage.Height) inputImage.SetPixel(point.x, point.y + 1, color);
+                if (point.y - 1 >= 0) inputImage.SetPixel(point.x, point.y - 1, color);
             }
         }
+
+        // hough_visualize_crossing: visualize every point in the list with a plus-shaped marker
         void hough_visualize_crossing(List<PixelPoint> crossing_coords, ref Bitmap inputImage, bool only_on_segment, Color color)
         {
             foreach (PixelPoint point in crossing_coords) // visualize every crossing point with a plus-shaped marker
@@ -311,7 +323,7 @@ namespace INFOIBV
          * houghTransform: a function that takes an image and returns the r-theta image that corresponds to it.
          * input: inputImage        Single channel image.
          *        theta1            first degree in degree in range 0--180
-         * output                   second degree in degree.
+         *        theta2            second degree in degree.
          */
         int[,] houghAngleLimit(byte[,] inputImage, double theta1, double theta2)
         {
@@ -415,6 +427,7 @@ namespace INFOIBV
             return temp;
         }
 
+        // findCentroids: returns a List of coordinates, the centroids in the flood image. An image in which each pixelvalue corresponds to the ID of the region it belongs to.
         List<PixelPoint> findCentroids(byte[,] flood)
         {
             IDictionary<int, (int count, int sumx, int sumy)> map = new Dictionary<int, (int, int, int)>();// data structure for finding centroids x and y position
@@ -434,7 +447,6 @@ namespace INFOIBV
             {
                 int x = kv.Value.sumx / kv.Value.count;
                 int y = kv.Value.sumy / kv.Value.count;
-                //Console.WriteLine("Blob: x: " + x + " y: " + y);
                 centroids.Add(new PixelPoint(x, y));
             }
             return centroids;
