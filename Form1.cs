@@ -802,7 +802,7 @@ namespace INFOIBV
             {
                 if (vertices.Count == 0) throw new Exception("No vertices");
                 this.top = this.bottom = vertices[0].y;
-                this.right = this.left = vertices[1].x;
+                this.right = this.left = vertices[0].x;
                 this.creation_points = vertices;
                 foreach (PixelPoint point in vertices)
                 {
@@ -841,6 +841,95 @@ namespace INFOIBV
                     list.Add(new PixelPoint(x, bottom));
                 }
                 return list;
+            }
+
+            public Socket toSocket(SocketType type)
+            {
+                Socket res =  new Socket(this);
+                res.blobs = blobs;
+                res.type = type;
+                return res;
+            }
+        }
+
+        private class Socket : RectangularRegion
+        {
+            public SocketType type;
+            public Socket() : base(0)
+            {
+
+            }
+            public Socket(SocketType type) : base(0)
+            {
+                this.type = type;
+            }
+            public Socket(RectangularRegion region) : base(new List<PixelPoint>() { new PixelPoint(region.left, region.top), new PixelPoint(region.right, region.bottom) })
+            {
+                type = SocketType.Unknown;
+            }
+            public void discoverType()
+            {
+                switch (blobs.Count)
+                {
+                    case 2:
+                        {
+                            type = SocketType.Unknown;
+                            double avgy = blobs.Select(b => b.y).Average();
+                            if (blobs.All(blob => Math.Abs(blob.y - avgy) < 3))
+                            {
+                                type = SocketType.GermanFrench; 
+                                break;
+                            }
+
+                        }
+
+                        break;
+                    case 3:
+                        {
+                            type = SocketType.Unknown;
+                            double avgx = blobs.Select(b => b.x).Average();
+                            double avgy = blobs.Select(b => b.y).Average();
+                            if (blobs.All(blob => Math.Abs(blob.x - avgx) < 3))
+                            {
+                                type = SocketType.Italian;
+                                break;
+                            }
+                            if (blobs.All(blob => Math.Abs(blob.y - avgy) < 3))
+                            {
+                                type = SocketType.HorizontalItalian;
+                                break;
+                            }
+                            double base_distance = blobs[0].euclidian_distance(blobs[1]);
+                            if (Math.Abs(blobs[1].euclidian_distance(blobs[2]) - base_distance) < 8)
+                            {
+                                if (Math.Abs(blobs[0].euclidian_distance(blobs[2]) - base_distance) < 8)
+                                {
+                                    type = SocketType.British;
+                                    break;
+                                }
+                            }
+                        }
+                        break;
+                    case 5:
+                        {
+                            type = SocketType.Unknown;
+                            double avgx = blobs.Select(b => b.x).Average();
+                            double avgy = blobs.Select(b => b.y).Average();
+                            if (blobs.All(blob => Math.Abs(blob.x - avgx) < 3) || blobs.All(blob => Math.Abs(blob.y - avgy) < 3))
+                            {
+                                type = SocketType.Multipurpose;
+                                break;
+                            }
+                        }
+
+                        break;
+
+                    default:
+
+                        break;
+
+                }
+
             }
         }
         private class Line
@@ -932,6 +1021,16 @@ namespace INFOIBV
             {
                 return new PixelPoint(x - 1, y);
             }
+        }
+
+        private enum SocketType
+        {
+            Italian,
+            HorizontalItalian,
+            British,
+            GermanFrench,
+            Multipurpose,
+            Unknown
         }
     }
 }
