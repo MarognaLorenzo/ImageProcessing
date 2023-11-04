@@ -49,6 +49,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ClassesAndStructures.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Form1.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -62,6 +65,9 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="PA3.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="parametersAndConstants.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Program.cs" />

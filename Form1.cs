@@ -631,104 +631,156 @@ namespace INFOIBV
             List<Line> h_lines;
             List<Line> v_lines;
             double theta_avg = axis1.Select(single_line => single_line.theta).Average();
-            h_lines = theta_avg < 45 || theta_avg > 135 ? axis1 : axis2;
-            v_lines = theta_avg < 45 || theta_avg > 135 ? axis2 : axis1;
+            v_lines = theta_avg < 45 || theta_avg > 135 ? axis1 : axis2;
+            h_lines = theta_avg < 45 || theta_avg > 135 ? axis2 : axis1;
 
+            // order lines with increasing r
             h_lines = h_lines.OrderBy(line => line.r).ToList();
             v_lines = v_lines.OrderBy(line => line.r).Reverse().ToList();
 
-
-
-            List<Line> lines_to_use = new List<Line> {v_lines[0] };
+            // List of lines to use to create a Rectangular region, is a support data structure in order to select the lines dynamically in the process.
+            // It start with a vertical line in it.
+            List<Line> lines_to_use = new List<Line> {v_lines[0]};
 
             List<RectangularRegion> res = new List<RectangularRegion>();
             for (int i = 0; i < v_lines.Count - 1; i++)
             {
+                // insert the adiacent vertical line ( on the right of the initial one )
                 lines_to_use.Add(v_lines[i + 1]);
+
+                // insert the first horizontal line
                 lines_to_use.Add(h_lines[0]);
+
                 for (int j = 0; j < h_lines.Count -1; j++)
                 {
+                    // insert the adiacent horizontal line ( lower than the first one )
                     lines_to_use.Add(h_lines[j + 1]);
 
+                    //build the region
                     List<PixelPoint> rectangle_vertices = hough_crossing_line(lines_to_use, workinImage);
+
+                    //if the region is valid add it to the the result list
                     if(rectangle_vertices.Count == 4) res.Add(new RectangularRegion(rectangle_vertices));
 
+
+                    // remove upper horizontal line
                     if(!lines_to_use.Remove(h_lines[j])) throw new Exception("element not found");
                     
                 }
+                // remove last horizontal line in the structure after the loop to start over from the top
                 lines_to_use.Remove(h_lines[h_lines.Count - 1]);
+
+                // remove vertical line on the left
                 if(!lines_to_use.Remove(v_lines[i])) throw new Exception("element not found");
             }
+
+
             return res;
         }
 
 
         List<Line> findGrid(List<Line> lines, ref byte[,] workingImage)
         {
+            // Create two collections to store pairable lines and their indices.
             ICollection<Line> pairable_lines = new HashSet<Line>();
             ICollection<int> pairable_lines_index = new HashSet<int>();
 
+            // Loop through the lines.
             for (int i = 0; i < lines.Count; i++)
             {
                 Line line1 = lines[i];
+
+                // Check if there's already a similar line in pairable_lines.
                 if (pairable_lines.Any(line_in_square => line_in_square.isAlmostSameAs(line1))) continue;
-            
+
+                // Loop through the remaining lines.
                 for (int j = i + 1; j < lines.Count; j++)
                 {
                     Line line2 = lines[j];
+
+                    // Check if there's already a similar line in pairable_lines.
                     if (pairable_lines.Any(line_in_square => line_in_square.isAlmostSameAs(line2))) continue;
-                    
+
+                    // Check if line1 and line2 are distant and parallel.
                     if (line1.isDistantParallelWith(line2))
                     {
-                        //Console.WriteLine("Parallel line: " + line1.ToString() + "with " + line2.ToString());
+                        // Add both lines to the pairable_lines collection.
                         pairable_lines.Add(line1);
                         pairable_lines.Add(line2);
+
+                        // Add their indices to the pairable_lines_index collection.
                         pairable_lines_index.Add(j);
                         pairable_lines_index.Add(i);
                     }
                 }
             }
-            // Only lines with a parallel buddy distant from the line itself
+
+            // Convert pairable_lines and pairable_lines_index to lists.
             pairable_lines = pairable_lines.ToList();
             pairable_lines_index = pairable_lines_index.ToList();
 
-
-            List<int> accum = new List<int> (lines.Count);
+            // Create a list to accumulate counts of almost parallel or perpendicular lines.
+            List<int> accum = new List<int>(lines.Count);
             while (accum.Count < accum.Capacity) accum.Add(0);
 
+            // Iterate through the pairable_lines to update the accumulations.
             for (int i = 0; i < pairable_lines.Count; i++)
             {
                 Line line1 = lines[i];
                 for (int j = i + 1; j < pairable_lines.Count; j++)
                 {
                     Line line2 = lines[j];
-                    if(line1.isAlmostParallelWith(line2) || line1.isAlmostPerpendicularWith(line2))
+                    if (line1.isAlmostParallelWith(line2) || line1.isAlmostPerpendicularWith(line2))
                     {
+                        // Increment the accumulators for both lines.
                         accum[pairable_lines_index.ElementAt(i)] += 1;
                         accum[pairable_lines_index.ElementAt(j)] += 1;
                     }
                 }
             }
 
+            // Find the maximum value in the accumulators.
             int max = accum.Max();
+
+            // Create a list to store the indices of lines with the maximum count.
             List<int> chosen_index = new List<int>();
 
+            // Add the indices of lines with the maximum count to chosen_index.
             for (int i = 0; i < accum.Count; i++)
+            {
                 if (accum[i] == max)
+                {
                     chosen_index.Add(i);
+                }
+            }
 
-
+            // Create a list to store the final result lines.
             List<Line> result = new List<Line>();
 
-            foreach(int index in chosen_index) result.Add(lines[index]);
+            // Add the lines with the chosen indices to the result list.
+            foreach (int index in chosen_index)
+            {
+                result.Add(lines[index]);
+            }
 
+            // Return the list of lines that form a grid pattern.
             return result;
         }
 
+
+        // Calculate the barycenter (center of mass) of a list of PixelPoint objects.
         PixelPoint barycentreOf(List<PixelPoint> points)
         {
-               return new PixelPoint((int) points.Select(point => point.x).Average(), (int) points.Select(point => point.y) .Average());
+            // Calculate the average of the x-coordinates of all points.
+            int averageX = (int)points.Select(point => point.x).Average();
+
+            // Calculate the average of the y-coordinates of all points.
+            int averageY = (int)points.Select(point => point.y).Average();
+
+            // Create a new PixelPoint object representing the barycenter.
+            return new PixelPoint(averageX, averageY);
         }
+
 
 
         /*

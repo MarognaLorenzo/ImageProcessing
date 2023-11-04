@@ -76,7 +76,7 @@ namespace INFOIBV
                 return creation_points;
             }
 
-            public PixelPoint get_baricenter()
+            public PixelPoint get_barycentre()
             {
                 return new PixelPoint((right + left) / 2, (top + bottom) / 2);
             }
