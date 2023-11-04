@@ -41,9 +41,9 @@ namespace INFOIBV
             return tempImage;
         }
 
-        // ====================================================================
-        // ============= YOUR FUNCTIONS FOR ASSIGNMENT 1 GO HERE ==============
-        // ====================================================================
+        /*invert Image
+         * inverts the grayscale value of a binary image
+         */
         private byte[,] invertImage(byte[,] inputImage)
         {
             // create temporary grayscale image
@@ -70,6 +70,9 @@ namespace INFOIBV
             return tempImage;
         }
 
+        /*brightImage
+         * increment the birghtness of the binary image with the given value, mapping every overflowing or underflowing value to 0-255
+         */
         private byte[,] brightImage(byte[,] inputImage, int value)
         {
             byte[,] tempImage = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
@@ -146,10 +149,10 @@ namespace INFOIBV
         }
 
         /*
- * adjustContrast: create an image with the full range of intensity values used
- * input:   inputImage          single-channel (byte) image
- * output:                      single-channel (byte) image
- */
+         * adjustContrast: create an image with the full range of intensity values used
+         * input:   inputImage          single-channel (int) image
+         * output:                      single-channel (byte) image
+         */
         private byte[,] adjustContrast(int[,] inputImage)
         {
             // create temporary grayscale image
@@ -612,34 +615,6 @@ namespace INFOIBV
             return tempImage;
         }
 
-        private byte[,] thresholdMapToZeroImage(byte[,] inputImage, int th)
-        {
-            // create temporary grayscale image
-            byte[,] tempImage = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
-
-            // TODO: add your functionality and checks, think about how to represent the binary values
-
-            // setup progress bar
-            progressBar.Visible = true;
-            progressBar.Minimum = 1;
-            progressBar.Maximum = inputImage.GetLength(0) * inputImage.GetLength(1);
-            progressBar.Value = 1;
-            progressBar.Step = 1;
-
-            // process all pixels in the image
-            for (int x = 0; x < inputImage.GetLength(0); x++)                 // loop over columns
-                for (int y = 0; y < inputImage.GetLength(1); y++)            // loop over rows
-                {
-                    // get pixel color
-                    tempImage[x, y] = (byte)(inputImage[x, y] >= th ? inputImage[x,y] : 0);
-                    progressBar.PerformStep();                              // increment progress bar
-                }
-
-            progressBar.Visible = false;
-
-            return tempImage;
-        }
-
         private byte[,] edge_sharpening(byte[,] inputImage, int a, int sigma)
         {
             // Create smothered image
@@ -669,66 +644,108 @@ namespace INFOIBV
 
         }
 
+        /* canny_edge_detection: execute the canny edge detection pipeline on a single channel greyscale image
+         * input:
+         * inputImage single channel greyscale image
+         * sizeGaussian: size of the gaussian kernel for smoothering filter
+         * sigma: sigma value for gaussian kernel for smoothering filter
+         * low_th: lower threshold to apply in the histeresis step
+         * high_th: higher threshold to apply in the histeresis step
+         * output:
+         * byte[,] edge map single channel greyscale image
+         * 
+         */
         private byte[,] canny_edge_detection(byte[,] inputImage, int sizeGaussian, int sigma, int low_th, int high_th)
         {
+            //SMOOTH IMAGE
             inputImage = convolveImage(inputImage, createGaussianFilter(sizeGaussian, sigma), false);
-            float[,] Gx = compute_gradient(inputImage, xSobelfilter); // gradiente orizzontale, linee verticali
-            float[,] Gy= compute_gradient(inputImage, ySobelfilter);  // gradiente verticale, linee orizzontali
-            int[,] magnitude = new int[inputImage.GetLength(0), inputImage.GetLength(1)];
-            int[,] non_max_sup = new int[inputImage.GetLength(0), inputImage.GetLength(1)];
 
-            double theta = Math.PI / 8; // Angolo di rotazione in radianti (π/8)
-            double cosTheta = Math.Cos(theta);
+            //FIND GRADIENTS
+            float[,] Gx = compute_gradient(inputImage, xSobelfilter); // horizontal gradient, vertical lines
+            float[,] Gy= compute_gradient(inputImage, ySobelfilter);  // vertical gradient, horizontal lines
+
+
+            int[,] magnitude = new int[inputImage.GetLength(0), inputImage.GetLength(1)];   // magnitude of gradient computation
+            int[,] non_max_sup = new int[inputImage.GetLength(0), inputImage.GetLength(1)]; // result of not maximum suppresion
+            byte[,] direction = new byte[inputImage.GetLength(0), inputImage.GetLength(1)]; // direction of edge in each pixel
+
+
+            //COMPUTE DIRECTION OF THE EDGE
+            double theta = Math.PI / 8;             // Rotation angle of (π/8) rad.
+
+            double cosTheta = Math.Cos(theta);      // caching heavier computation
             double sinTheta = Math.Sin(theta);
 
-            // Calcolo delle nuove componenti ruotate
-            byte[,] direction = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
             set_directions();
-            int[][] direction_offset = {
-                new int[] { 1, 0 },   // Destra
-                new int[] { 1, 1 },   // Diagonale in alto a destra
-                new int[] { 0, 1 },   // Sopra
-                new int[] { -1, 1 },  // Diagonale in alto a sinistra
-                new int[] { -1, 0 },  // Sinistra
-                new int[] { -1, -1 }, // Diagonale in basso a sinistra
-                new int[] { 0, -1 },  // Sotto
-                new int[] { 1, -1 }   // Diagonale in basso a destra
+
+
+            int[][] direction_offset = { // vertical axis is inverted
+                new int[] { 1, 0 },   // Right
+                new int[] { 1, 1 },   // Down Right
+                new int[] { 0, 1 },   // Down
+                new int[] { -1, 1 },  // Down Left
+                new int[] { -1, 0 },  // Left
+                new int[] { -1, -1 }, // Top Left
+                new int[] { 0, -1 },  // Top
+                new int[] { 1, -1 }   // Top Right
             };
             
 
+            //NOT MAXIMUM SUPPRESSION
             for (int c = 0; c < inputImage.GetLength(0); c++)
-                for (int r = 0; r < inputImage.GetLength(1); r++)
+                for (int r = 0; r < inputImage.GetLength(1); r++)// foreach pixel
                 {
+                    //skip unvalid  directions ( magnitude == 0 )
                     if (direction[c, r] == 9) continue;
+
+                    // offset of the pixel to compare with
                     int x_off = direction_offset[direction[c, r]][0];
                     int y_off = direction_offset[direction[c, r]][1];
 
+                    //boundary check
                     if (c + x_off >= inputImage.GetLength(0) || c + x_off < 0 || r + y_off >= inputImage.GetLength(1) || r + y_off < 0) continue;
+
+                    //non maximum suppression result is stored in non_maximum_sup
                     non_max_sup[c, r] = (magnitude[c, r] < magnitude[c + x_off, r + y_off]) ? 0 : magnitude[c, r];
                 }
 
+            // HISTERESIS - process is considered as a BFS.
 
+            //IDEA:
+            // 1. pixel > HIGH_TH will always be included in the result image 
+            // 2. from each pixel > HIGH_TH a BFS can start to add eventually LOW_TH < pixel < HIGH_TH
+            byte[,] result_image = new byte[non_max_sup.GetLength(0), non_max_sup.GetLength(1)];
+
+            //BFS Queue
             Queue<PixelPoint> pixel_to_check = new Queue<PixelPoint>() ;
+
+            //Add pixel > HIGH_TH to the queue
             for(int c = 0; c < non_max_sup.GetLength(0); c++)
                 for(int r = 0; r < non_max_sup.GetLength(1); r++)
                     if (non_max_sup[c,r] >= high_th) pixel_to_check.Enqueue(new PixelPoint(c, r));
 
-            byte[,] result_image = new byte[non_max_sup.GetLength(0), non_max_sup.GetLength(1)];
 
             while (pixel_to_check.Any())
             {
                 PixelPoint pixel = pixel_to_check.Dequeue();
                 int px = pixel.x;
                 int py = pixel.y;
+
+                //pixel out of bounds
                 if (px < 0 || px >= inputImage.GetLength(0) || py < 0 || py >= inputImage.GetLength(1)) continue;
+
+                //pixel already visited
                 if (result_image[px, py] == 255) continue;
                 
                 int value = non_max_sup[px, py];
 
+                //if pixel is at least LOW_TH and has been reached from an activated pixel
                 if(low_th <= value)
-                {
+                {   
+                    // The pixel deserves to be activated
                     result_image[px, py] = 255;
-                    if(value < high_th) // they actually need to be added because the pixel is not a top pixel
+
+                    if(value < high_th) // continue the BFS for new added pixels
                     {
                         pixel_to_check.Enqueue(pixel.Up());
                         pixel_to_check.Enqueue(pixel.Down());
@@ -743,26 +760,39 @@ namespace INFOIBV
             void set_directions()
             {
                 for (int c = 0; c < inputImage.GetLength(0); c++)
-                    for (int r = 0; r < inputImage.GetLength(1); r++)
+                    for (int r = 0; r < inputImage.GetLength(1); r++)// foreach pixel
                     {
+                        //compute magnitude
                         magnitude[c, r] = (int)Math.Sqrt(Gx[c, r] * Gx[c, r] + Gy[c, r] * Gy[c, r]);
+
+                        //if magnitude is zero set the direction to unvalid costant
                         if (magnitude[c, r] == 0)
                         {
                             direction[c, r] = 9;
                             continue;
                         }
-                        double x = Gx[c, r];
-                        double y = Gy[c, r];
-                        double vx = Gx[c, r] * cosTheta - Gy[c, r] * sinTheta;
+
+                        // rotate gradient components
+                        double vx = Gx[c, r] * cosTheta - Gy[c, r] * sinTheta; 
                         double vy = Gx[c, r] * sinTheta + Gy[c, r] * cosTheta;
 
+                        // Comparisons of vx and vy signs and order to compute direction
+                        // Values of rotation for the gradient rotated back:
+                        // 0 => Right
+                        // 1 => Down Right
+                        // 2 => Down
+                        // 3 => Down Left
+                        // 4 => Left
+                        // 5 => Top Left
+                        // 6 => Top
+                        // 7 => Top Right
                         if (vx >= 0)
                         {
                             if (vy >= 0)
                             {
                                 if (vx >= vy)
                                 {
-                                    direction[c, r] = 0;
+                                    direction[c, r] = 0; 
                                 }
                                 else direction[c, r] = 1;
                             }
