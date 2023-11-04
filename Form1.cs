@@ -486,7 +486,7 @@ namespace INFOIBV
             List<RectangularRegion> regions = identify_regions(grid_lines, grid_lines_index, ref workingImage);
 
             Console.WriteLine("I have found " + regions.Count + " possible sockets");
-            List<RectangularRegion> sockets = new List<RectangularRegion>();
+            List<Socket> sockets = new List<Socket>();
 
             foreach (RectangularRegion region in regions)
             {
@@ -503,7 +503,7 @@ namespace INFOIBV
                 }
                 if (region.blobs.Count < 2)
                 {
-                    Console.WriteLine("Socket not found");
+                    //Console.WriteLine("Socket not found");
                     continue;
                 }
                 //Console.WriteLine("Blob in this region: ");
@@ -515,9 +515,13 @@ namespace INFOIBV
                 PixelPoint region_baricenter = region.get_baricenter();
                 //Console.WriteLine("Region baricenter: " + region_baricenter.toString());
                 double euc = blob_baricenter.euclidian_distance(region_baricenter);
+
                 if (euc < 30){ // SOCKET FOUND
-                    sockets.Add(region);
-                    Console.WriteLine("Socket found");
+                    Socket socket = region.toSocket();
+                    socket.findType();
+
+                    sockets.Add(socket);
+                    Console.WriteLine("Socket found: " + socket.type);
                 }
             }
 
@@ -568,8 +572,15 @@ namespace INFOIBV
             //    hough_visualize_crossing(region.get_creation_point(), ref OutputImage, false, Color.Red);
 
             foreach (var socket in sockets)
+            {
+                Color color = socket.typeToColor();
                 foreach (var pixel in socket.generate_rectangle())
-                    OutputImage.SetPixel(pixel.x, pixel.y, Color.Blue);
+                    OutputImage.SetPixel(pixel.x, pixel.y, color);
+                if (socket.type == SocketType.Unknown)
+                {
+                    hough_visualize_crossing(socket.blobs, ref OutputImage, false, Color.YellowGreen);
+                }
+            }
             //Blo
             //hough_visualize_crossing(blobs, ref OutputImage, false, Color.YellowGreen);
 
@@ -843,11 +854,10 @@ namespace INFOIBV
                 return list;
             }
 
-            public Socket toSocket(SocketType type)
+            public Socket toSocket()
             {
                 Socket res =  new Socket(this);
                 res.blobs = blobs;
-                res.type = type;
                 return res;
             }
         }
@@ -867,7 +877,7 @@ namespace INFOIBV
             {
                 type = SocketType.Unknown;
             }
-            public void discoverType()
+            public void findType()
             {
                 switch (blobs.Count)
                 {
@@ -900,28 +910,15 @@ namespace INFOIBV
                                 break;
                             }
                             double base_distance = blobs[0].euclidian_distance(blobs[1]);
-                            if (Math.Abs(blobs[1].euclidian_distance(blobs[2]) - base_distance) < 8)
+                            if (Math.Abs(blobs[1].euclidian_distance(blobs[2]) - base_distance) < base_distance * 0.15)
                             {
-                                if (Math.Abs(blobs[0].euclidian_distance(blobs[2]) - base_distance) < 8)
+                                if (Math.Abs(blobs[0].euclidian_distance(blobs[2]) - base_distance) < base_distance * 0.15)
                                 {
                                     type = SocketType.British;
                                     break;
                                 }
                             }
                         }
-                        break;
-                    case 5:
-                        {
-                            type = SocketType.Unknown;
-                            double avgx = blobs.Select(b => b.x).Average();
-                            double avgy = blobs.Select(b => b.y).Average();
-                            if (blobs.All(blob => Math.Abs(blob.x - avgx) < 3) || blobs.All(blob => Math.Abs(blob.y - avgy) < 3))
-                            {
-                                type = SocketType.Multipurpose;
-                                break;
-                            }
-                        }
-
                         break;
 
                     default:
@@ -930,6 +927,19 @@ namespace INFOIBV
 
                 }
 
+            }
+
+            public Color typeToColor()
+            {
+                switch (type)
+                {
+                    case SocketType.Unknown: return Color.Coral;
+                    case SocketType.British: return Color.Green;
+                    case SocketType.GermanFrench: return Color.Blue;
+                    case SocketType.Italian: return Color.Red;
+                    case SocketType.HorizontalItalian: return Color.Violet;
+                    default: return Color.DarkOliveGreen;
+                }
             }
         }
         private class Line
@@ -1029,7 +1039,6 @@ namespace INFOIBV
             HorizontalItalian,
             British,
             GermanFrench,
-            Multipurpose,
             Unknown
         }
     }
