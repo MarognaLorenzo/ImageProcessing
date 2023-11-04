@@ -118,7 +118,7 @@ namespace INFOIBV
                 hough_visualization(segments[i], ref OutputImage, pixel_in_lines[i], Color.Red);
 
             //VISUALIZE GREEN DOTS
-            hough_visualize_crossing(crossing_coords, ref OutputImage);
+            hough_visualize_crossing(crossing_coords, ref OutputImage, Color.Green);
 
             pictureBoxOut.Image = (Image)OutputImage;                         // display output image
 
@@ -174,7 +174,7 @@ namespace INFOIBV
                 hough_visualization(segments[i], ref OutputImage, pixel_in_lines[i], Color.Red);
 
             //VISUALIZE GREEN DOTS
-            hough_visualize_crossing(crossing_coords, ref OutputImage);
+            hough_visualize_crossing(crossing_coords, ref OutputImage, Color.Green);
 
             pictureBoxOut.Image = (Image)OutputImage;                         // display output image
 
@@ -229,7 +229,7 @@ namespace INFOIBV
                 hough_visualization(segments[i], ref OutputImage, pixel_in_lines[i], Color.Red);
 
             //VISUALIZE GREEN DOTS
-            hough_visualize_crossing(crossing_coords, ref OutputImage);
+            hough_visualize_crossing(crossing_coords, ref OutputImage, Color.Green);
 
             pictureBoxOut.Image = (Image)OutputImage;                         // display output image
 
@@ -267,11 +267,6 @@ namespace INFOIBV
                 pictureBoxOut.Image = (Image)OutputImage;                         // display output image                         // display output image
             }
 
-
-        }
-
-        private void houghTransformAngleLimitClick(object sender, EventArgs e)
-        {
 
         }
 
@@ -466,78 +461,76 @@ namespace INFOIBV
                 for (int y = 0; y < InputImage1.Size.Height; y++)            // loop over rows
                     Image[x, y] = InputImage1.GetPixel(x, y);                // set pixel color in array at (x,y)
 
-
+            // START OF THE PIPELINE
+            // PREPOCESSING
             byte[,] g_scale_image = convertToGrayscale(Image);          // convert image to grayscale
             byte[,] contrast = adjustContrast(g_scale_image);
+
+            // EDGE DETECTION - 2 different methods
             byte[,] edge_image = edgeMagnitude(contrast, xSobelfilter, ySobelfilter);
             byte[,] canny_edge_image = canny_edge_detection(contrast, CANNY_EDGE_SIZE, CANNY_SIGMA, LOW_TH, HIGH_TH);
+
+            // LINE DETECTION
+            List<Line> canny_detected_lines = peakFinding(canny_edge_image, THRESHOLD); 
+            List<Line> withouth_canny_detected_lines = peakFinding(edge_image, THRESHOLD); 
+            List<Line> lines = canny_detected_lines.Concat(withouth_canny_detected_lines).ToList();
+
+            // SETTING UP OUTPUT IMAGE
             byte[,] workingImage = contrast;
-            List<Line> lines_canny = peakFinding(canny_edge_image, THRESHOLD); // find peaks
-            List<Line> other_lines = peakFinding(edge_image, THRESHOLD); // More peaks
-            List<Line> lines = lines_canny.Concat(other_lines).ToList();
 
+            // GRID BUILDING
+            List<Line> grid_lines = findGrid(lines, ref workingImage);
 
+            // RECTANGLES IDENTIFICATION
+            List<RectangularRegion> regions = identify_regions(grid_lines, ref workingImage);
 
-            (List<Line> grid_lines, List<int> grid_lines_index) = findGrid(lines, ref workingImage);
-
-
-            //List<PixelPoint> vertices = hough_crossing_line(grid_lines, workingImage);
-
-            List<RectangularRegion> regions = identify_regions(grid_lines, grid_lines_index, ref workingImage);
-
-            Console.WriteLine("I have found " + regions.Count + " possible sockets");
+            // some of the RectangularRegions can be converted in a Socket
             List<Socket> sockets = new List<Socket>();
 
             foreach (RectangularRegion region in regions)
             {
-                // blob detection
-                
+                //FIND BLOBS
+
+                // Crop image
                 byte[,] crop = cropImage(contrast, region);
-                //byte[,] reAdjust = adjustContrast(crop);
-                region.blobs = blobFinding(crop, 0.2, ref workingImage);
+
+                region.blobs = blobFinding(crop, 0.2);
                 
+                // Adjsut blob position with on uncropped image
                 for (int i = 0; i < region.blobs.Count; i++)
                 {
                     region.blobs[i].x += region.left;
                     region.blobs[i].y += region.bottom;
                 }
-                if (region.blobs.Count < 2)
-                {
-                    //Console.WriteLine("Socket not found");
-                    continue;
-                }
-                //Console.WriteLine("Blob in this region: ");
-                foreach(var blob in region.blobs) Console.WriteLine(blob.toString());
-                PixelPoint blob_baricenter = baricenterOf(region.blobs);
-                //Console.WriteLine("Blobs baricenter : " + blob_baricenter.toString());
 
-                //Console.WriteLine(region.toString());
-                PixelPoint region_baricenter = region.get_baricenter();
-                //Console.WriteLine("Region baricenter: " + region_baricenter.toString());
-                double euc = blob_baricenter.euclidian_distance(region_baricenter);
 
-                if (euc < 30){ // SOCKET FOUND
+                // SOCKET DETECTION
+                if (region.blobs.Count < 2) continue; // Socket not found in the region
+
+
+                // Comparison of barycentres
+                PixelPoint region_barycentre = region.get_barycentre();
+
+                double euclidian_distance = barycentreOf(region.blobs).euclidian_distance(region_barycentre);
+
+                if (euclidian_distance < 30){ // SOCKET FOUND
+
+                    //it is possible to show which blobs have been detected
+                    //foreach(var blob in region.blobs) Console.WriteLine(blob.toString());
+
+                    // Convert the region to a socket
                     Socket socket = region.toSocket();
+
+                    // SOCKET RECOGNITION
                     socket.findType();
 
                     sockets.Add(socket);
+
                     Console.WriteLine("Socket found: " + socket.type);
                 }
             }
 
-
-            List<List<Segment>> segments = new List<List<Segment>>();
-            List<List<PixelPoint>> pixel_in_lines = new List<List<PixelPoint>>();
-
-            foreach (Line line in lines) // for every detected lines find segments and whole line ( easier for computation and precision)
-            {
-                (List<Segment> segmentsToAdd, List<PixelPoint> pixels_on_line) = hough_line_detection(workingImage, line.r, line.theta, MINIMUM_THRESHOLD, MINIMUM_LENGHT, MAXIMUM_GAP);
-                segments.Add(segmentsToAdd);
-                pixel_in_lines.Add(pixels_on_line);
-            }
-
-            List<PixelPoint> crossing_coords = hough_crossing_line(lines, workingImage); // find crossing points
-
+            // PLOT RESULTS
 
             OutputImage = new Bitmap(workingImage.GetLength(0), workingImage.GetLength(1)); // create new output image
 
@@ -551,89 +544,104 @@ namespace INFOIBV
                     OutputImage.SetPixel(x, y, newColor);                  // set the pixel color at coordinate (x,y)
                 }
 
-            //// VISUALIZE LINES
-            //for (int i = 0; i < segments.Count; i++)
-            //    hough_visualization(segments[i], ref OutputImage, pixel_in_lines[i], square_index.Exists(x => x == i) ? Color.Blue : Color.Red);
 
-            ////VISUALIZE DOTS
-            //hough_visualize_crossing(crossing_coords, ref OutputImage);
-
-
-            //// VISUALIZE square
-            //for (int i = 0; i < segments.Count; i++)
-            //    if (grid_lines_index.Exists(x => x == i))
-            //        hough_visualization(segments[i], ref OutputImage, pixel_in_lines[i], Color.Yellow);
-
-
-            ////Vertices of the parallel lines
-            ////hough_visualize_crossing(vertices, ref OutputImage, false, Color.Orange);
-
-            //foreach (RectangularRegion region in regions)
-            //    hough_visualize_crossing(region.get_creation_point(), ref OutputImage, false, Color.Red);
-
+            // plot bounding box
             foreach (var socket in sockets)
             {
-                Color color = socket.typeToColor();
+                // Color of the box depends on the type of socket
+                Color color = socket.typeToColor(); 
+
+                // plot box
                 foreach (var pixel in socket.generate_rectangle())
                     OutputImage.SetPixel(pixel.x, pixel.y, color);
+
+                // plot blobs if socket is Unknown
                 if (socket.type == SocketType.Unknown)
                 {
                     hough_visualize_crossing(socket.blobs, ref OutputImage, false, Color.YellowGreen);
                 }
             }
-            //Blo
-            //hough_visualize_crossing(blobs, ref OutputImage, false, Color.YellowGreen);
 
             pictureBoxOut.Image = (Image)OutputImage;                         // display output image
-
         }
+
+        // cropImage: returns a new image from the old one given a rectangular region inside the starting image
         private byte[,] cropImage(byte[,] inputImage, RectangularRegion target)
         {
             byte[,] res = new byte[target.get_width(), target.get_height()];
+
+            // find the borders
             (int top, int right, int bottom, int left) = target.get_tuple();
 
+            // build the new image
             for (int c = left; c < right; c++)
                 for (int r = bottom; r < top; r++)
                     res[c - left, r - bottom] = inputImage[c, r];
             return res;
         }
 
-        List<PixelPoint> blobFinding(byte[,] inputImage, double threshold, ref byte[,] workingImage)
+        /* blobFinding: pipeline to find the blobs inside a socket
+         * input:
+         * inputImage: single channel greyscale image
+         * threshold: maximum value of intensity for black ( percentage )
+         * output: List of pixels corresponding to the barycentres of every single blob
+         */
+        List<PixelPoint> blobFinding(byte[,] inputImage, double threshold)
         {
-
+            // find real blacks
             byte[,] thresholded = thresholdImage(inputImage, (int)(threshold * 255));
+            
+            // invert image
             byte[,] invert = invertImage(thresholded);
+
+            // open image to get rid of single white pixels, I only want to keep bigger areas
             byte[,] open_invert = openImage(invert, createStructuringElement(5, SEShape.Plus), true);
-            byte[,] flood = floodFill(open_invert); // label all regions with an incremental ID
+
+            // label all regions with an incremental ID
+            byte[,] flood = floodFill(open_invert); 
             
             return findCentroids(flood);
         }
 
-        private List<RectangularRegion> identify_regions(List<Line> grid_lines, List<int> grid_lines_index, ref byte[,] workinImage)
+        /* identify regions: returns the list of rectangles described by 4 lines of the grid
+         * input:
+         * grid_lines: a list of Lines that compose the grid, every line is either parallel or perpendicular to all the others in the list
+         * workingImage: singles channel greyscale 
+         */
+        private List<RectangularRegion> identify_regions(List<Line> grid_lines, ref byte[,] workinImage)
         {
             if (grid_lines.Count == 0) return new List<RectangularRegion>();
 
-            // dbsscan
+            // First step - divide parallel and perpendicular lines in 2 groups
+
             List<Line> axis1 = new List<Line> { grid_lines[0] };
             List<Line> axis2 = new List<Line>();
-            List<RectangularRegion> res = new List<RectangularRegion>();
-            foreach (Line line in grid_lines.Skip(1))
+
+            foreach (Line line in grid_lines.Skip(1)) // first element already in a group
             {
-                if (axis1.Any(horixontal_line => horixontal_line.isAlmostParallelWith(line))) axis1.Add(line);
+                // if the line is parallel with axis 1 it belongs to axis 1, otherwise to axis 2
+                if (axis1.Any(horizontal_line => horizontal_line.isAlmostParallelWith(line))) axis1.Add(line);
                 else axis2.Add(line);
             }
+
+            // if the grid only have parallel line there is no rectangle
             if (axis2.Count == 0 || axis1.Count == 0) return new List<RectangularRegion>();
 
+            // detect which group is more horizontal or more vertical
             List<Line> h_lines;
             List<Line> v_lines;
-            double avg1 = axis1.Select(single_line => single_line.theta).Average();
-            h_lines = avg1 < 45 || avg1 > 135 ? axis1 : axis2;
-            v_lines = avg1 < 45 || avg1 > 135 ? axis2 : axis1;
+            double theta_avg = axis1.Select(single_line => single_line.theta).Average();
+            h_lines = theta_avg < 45 || theta_avg > 135 ? axis1 : axis2;
+            v_lines = theta_avg < 45 || theta_avg > 135 ? axis2 : axis1;
 
             h_lines = h_lines.OrderBy(line => line.r).ToList();
             v_lines = v_lines.OrderBy(line => line.r).Reverse().ToList();
+
+
+
             List<Line> lines_to_use = new List<Line> {v_lines[0] };
 
+            List<RectangularRegion> res = new List<RectangularRegion>();
             for (int i = 0; i < v_lines.Count - 1; i++)
             {
                 lines_to_use.Add(v_lines[i + 1]);
@@ -655,7 +663,7 @@ namespace INFOIBV
         }
 
 
-        (List<Line> grid, List<int> grid_index) findGrid(List<Line> lines, ref byte[,] workingImage)
+        List<Line> findGrid(List<Line> lines, ref byte[,] workingImage)
         {
             ICollection<Line> pairable_lines = new HashSet<Line>();
             ICollection<int> pairable_lines_index = new HashSet<int>();
@@ -712,12 +720,12 @@ namespace INFOIBV
 
             List<Line> result = new List<Line>();
 
-            foreach(int index in chosen_index) result.Add(lines[index]);    
-            
-            return (result, chosen_index);
+            foreach(int index in chosen_index) result.Add(lines[index]);
+
+            return result;
         }
 
-        PixelPoint baricenterOf(List<PixelPoint> points)
+        PixelPoint barycentreOf(List<PixelPoint> points)
         {
                return new PixelPoint((int) points.Select(point => point.x).Average(), (int) points.Select(point => point.y) .Average());
         }
@@ -758,288 +766,6 @@ namespace INFOIBV
             {
                 e.Handled = true;
             }
-        }
-
-
-        internal enum SEShape
-        {
-            Square,
-            Plus
-        }
-
-        private class Segment
-        {
-            public PixelPoint start;
-            public PixelPoint end;
-            public void clear()
-            {
-                start = end = new PixelPoint(-1, -1);
-            }
-            public void set_start(PixelPoint start)
-            {
-                this.start = start;
-
-            }
-        }
-
-        private class RectangularRegion
-        {
-            public int top;
-            public int bottom;
-            public int right;
-            public int left;
-
-            private List<PixelPoint> creation_points;
-            public List<PixelPoint> blobs;
-
-            public int get_height()
-            {
-                return this.top - this.bottom;
-            }
-            public int get_width()
-            {
-                return this.right - this.left;
-            }
-            public (int top, int right, int bottom, int left) get_tuple()
-            {
-                return (top, right, bottom, left);
-            }
-
-            public RectangularRegion(int value)
-            {
-                top = bottom = left = right = value;
-            }
-            public RectangularRegion (List<PixelPoint> vertices)
-            {
-                if (vertices.Count == 0) throw new Exception("No vertices");
-                this.top = this.bottom = vertices[0].y;
-                this.right = this.left = vertices[0].x;
-                this.creation_points = vertices;
-                foreach (PixelPoint point in vertices)
-                {
-                    this.top = Math.Max(this.top, point.y);
-                    this.bottom = Math.Min(this.bottom, point.y);
-                    this.left = Math.Min(this.left, point.x);
-                    this.right = Math.Max(this.right, point.x);
-                }
-            }
-            public List<PixelPoint> get_creation_point()
-            {
-                return creation_points;
-            }
-
-            public PixelPoint get_baricenter()
-            {
-                return new PixelPoint((right + left) / 2, (top + bottom )/ 2);
-            }
-
-            public String toString()
-            {
-                return "Rectangular region => top: " + top + " bottom: " + bottom + "right: " + right + " left: " + left;
-            }
-            public List<PixelPoint> generate_rectangle()
-            {
-                List<PixelPoint> list = new List<PixelPoint>();
-                for (int y = bottom; y <= top; y++)
-                {
-                    list.Add(new PixelPoint(right, y));
-                    list.Add(new PixelPoint(left, y));
-
-                }
-                for (int x = left; x <= right; x++)
-                {
-                    list.Add(new PixelPoint(x, top));
-                    list.Add(new PixelPoint(x, bottom));
-                }
-                return list;
-            }
-
-            public Socket toSocket()
-            {
-                Socket res =  new Socket(this);
-                res.blobs = blobs;
-                return res;
-            }
-        }
-
-        private class Socket : RectangularRegion
-        {
-            public SocketType type;
-            public Socket() : base(0)
-            {
-
-            }
-            public Socket(SocketType type) : base(0)
-            {
-                this.type = type;
-            }
-            public Socket(RectangularRegion region) : base(new List<PixelPoint>() { new PixelPoint(region.left, region.top), new PixelPoint(region.right, region.bottom) })
-            {
-                type = SocketType.Unknown;
-            }
-            public void findType()
-            {
-                switch (blobs.Count)
-                {
-                    case 2:
-                        {
-                            type = SocketType.Unknown;
-                            double avgy = blobs.Select(b => b.y).Average();
-                            if (blobs.All(blob => Math.Abs(blob.y - avgy) < 3))
-                            {
-                                type = SocketType.GermanFrench; 
-                                break;
-                            }
-
-                        }
-
-                        break;
-                    case 3:
-                        {
-                            type = SocketType.Unknown;
-                            double avgx = blobs.Select(b => b.x).Average();
-                            double avgy = blobs.Select(b => b.y).Average();
-                            if (blobs.All(blob => Math.Abs(blob.x - avgx) < 3))
-                            {
-                                type = SocketType.Italian;
-                                break;
-                            }
-                            if (blobs.All(blob => Math.Abs(blob.y - avgy) < 3))
-                            {
-                                type = SocketType.HorizontalItalian;
-                                break;
-                            }
-                            double base_distance = blobs[0].euclidian_distance(blobs[1]);
-                            if (Math.Abs(blobs[1].euclidian_distance(blobs[2]) - base_distance) < base_distance * 0.15)
-                            {
-                                if (Math.Abs(blobs[0].euclidian_distance(blobs[2]) - base_distance) < base_distance * 0.15)
-                                {
-                                    type = SocketType.British;
-                                    break;
-                                }
-                            }
-                        }
-                        break;
-
-                    default:
-
-                        break;
-
-                }
-
-            }
-
-            public Color typeToColor()
-            {
-                switch (type)
-                {
-                    case SocketType.Unknown: return Color.Coral;
-                    case SocketType.British: return Color.Green;
-                    case SocketType.GermanFrench: return Color.Blue;
-                    case SocketType.Italian: return Color.Red;
-                    case SocketType.HorizontalItalian: return Color.Violet;
-                    default: return Color.DarkOliveGreen;
-                }
-            }
-        }
-        private class Line
-        {
-            public double theta;
-            public double r;
-            public Line(double r, double theta)
-            {
-                this.theta = theta;
-                this.r = r;
-            }
-            public double get_diff(Line l2)
-            {
-                double abs_diff = Math.Abs(l2.theta - this.theta);
-                return abs_diff <= 90 ? abs_diff : (360 - 2 * abs_diff) / 2;
-            }
-            public bool isAlmostSameAs(Line line1)
-            {
-                double diff = Math.Abs(line1.theta - this.theta);
-                if (diff < 5 && Math.Abs(line1.r - this.r) < 4) return true;
-                if (diff > 175 && Math.Abs(line1.r + this.r) < 4) return true;
-
-                return false;
-            }
-            public bool isAlmostParallelWith(Line line1)
-            {
-                return this.get_diff(line1) < 5;
-            }
-            public bool isAlmostPerpendicularWith(Line line1)
-            {
-                double diff = this.get_diff(line1);
-                if (85 < diff && diff < 95) return true;
-                return false;
-            }
-            public bool isDistantParallelWith(Line line1)
-            {
-                double diff = Math.Abs(line1.theta - this.theta);
-                if (diff < 5 && Math.Abs(line1.r - this.r) > 10) return true;
-                if (diff > 175 && Math.Abs(line1.r + this.r) > 10) return true;
-                return false;
-            }
-            public bool isAlmostVertical ()
-            {
-                return theta < 5 || theta > 175;
-            }
-            public bool isAlmostHorizontal()
-            {
-                return 75 < theta && theta < 85;
-            }
-            public bool isAxisAligned()
-            {
-                return this.isAlmostVertical() || this.isAlmostHorizontal();
-            }
-
-
-        }
-        private class PixelPoint
-        {
-            public int x { get; set; }
-            public int y { get; set; }
-            public PixelPoint(int x, int y)
-            {
-                this.x = x;
-                this.y = y;
-            }
-            public double euclidian_distance(PixelPoint p2)
-            {
-                return Math.Sqrt(Math.Pow((x - p2.x), 2) + Math.Pow((y - p2.y), 2));
-            }
-
-            public String toString()
-            {
-                return "Point => x: " + x + ", " + y + ")";
-            }
-
-            public PixelPoint Up()
-            {
-                return new PixelPoint(x, y + 1);
-            }
-            public PixelPoint Down()
-            {
-                return new PixelPoint(x, y - 1);
-            }
-            public PixelPoint Left()
-            {
-                return new PixelPoint(x + 1, y);
-            }
-            public PixelPoint Right()
-            {
-                return new PixelPoint(x - 1, y);
-            }
-        }
-
-        private enum SocketType
-        {
-            Italian,
-            HorizontalItalian,
-            British,
-            GermanFrench,
-            Unknown
         }
     }
 }
