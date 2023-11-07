@@ -1,11 +1,14 @@
 # Image Processing Application
 
-This project is an Image Processing Application implemented in C#. It allows users to apply various filters and functions to an image, which can be loaded within the graphical user interface (GUI) and exported. This project was developed as part of the Image Processing course at the University of Utrecht during an Erasmus exchange program.
+This project is an Image Processing Application implemented in C#. It's aim is to build a set of functionalities (e.g. filter application, Canny edge detection, Hough transform) to design and implement a pipeline for wall socket detection. Images can be loaded within the graphical user interface (GUI) and exported. This project was developed as part of the Image Processing course at the University of Utrecht during an Erasmus exchange program.
+
+For detailed info about the pipeline and results analysis, feel free to look at the [final report](https://github.com/MarognaLorenzo/ImageProcessing/blob/master/final_report.pdf)
 
 ## Features
 
-- **Filter Application:** The application provides a range of image filters that users can apply to manipulate the appearance of the loaded image.
-- **Function Application:** Users can apply various image processing functions to modify image properties or perform mathematical operations.
+- **Function Application:** Users can apply various image processing functions to test some partial results in the pipeline.
+- **Socket detection:** The pipeline was tested on real world images and proved to be able to find front-viewed sockets in a low-noise environ.
+- **Socket recognition:** The programm assigns a different color to the bounding box accordingly to the kind socket. It can distinguish between German, French, British and Itaian.
 - **User-Friendly GUI:** The graphical user interface (GUI) is designed for ease of use, with intuitive controls for loading, editing, and exporting images.
 - **Export Images:** Users can save the edited images in various file formats, such as JPEG, PNG, or BMP.
 
@@ -24,8 +27,8 @@ Follow these steps to get the project up and running on your local machine:
 ## Usage
 
 - Launch the application and use the GUI to load an image from your local storage.
-- Apply filters and functions to the loaded image using the provided controls.
-- Preview the edited image in real-time.
+- Test the pipeline out
+- Enjoy ( sometimes ) the result 
 - Export the edited image in your desired file format.
     
 ## Contributing
