@@ -49,30 +49,30 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ClassesAndStructures.cs">
+    <Compile Include="source\ClassesAndStructures.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Form1.cs">
+    <Compile Include="source\Form1.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Form1.Designer.cs">
+    <Compile Include="source\Form1.Designer.cs">
       <DependentUpon>Form1.cs</DependentUpon>
     </Compile>
-    <Compile Include="PA1.cs">
+    <Compile Include="source\PA1.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="PA2.cs">
+    <Compile Include="source\PA2.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="PA3.cs">
+    <Compile Include="source\PA3.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="parametersAndConstants.cs">
+    <Compile Include="source\parametersAndConstants.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <EmbeddedResource Include="Form1.resx">
+    <EmbeddedResource Include="source\Form1.resx">
       <DependentUpon>Form1.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
